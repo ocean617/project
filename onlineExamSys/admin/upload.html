@@ -1,0 +1,167 @@
+<div id="ui_upload" style="padding:10px">
+	<div id="ui_upload_loading_div" style="display: none;">
+		<div id="ui_upload_loading" class="easyui-progressbar" style="width: 300px;"></div>
+	</div>
+	<div id="ui_upload_importing_div" style="display: none;">
+		<div id="ui_upload_importing" class="easyui-progressbar" style="width: 300px;"></div>
+	</div>
+	<div>
+		<form id="ui_upload_fm" method="post" enctype="multipart/form-data">
+			<table style="width:100%">
+				<tr>
+					<th>模板：</th>
+					<td><a id="ui_upload_file_template" href="javascript:void(0)">模板下载</a></td>
+				</tr>
+				<tr>
+					<th style="width:80px">上传文件：</th>
+					<td><input type="file" name="ui_upload_fm_file" style="width:260px;overflow:hidden"
+						id="ui_upload_fm_file" /></td>
+				</tr>
+				<tr>
+					<td colspan="2"><a id="ui_upload_bntUpload"
+						href="javascript:void(0);" class="easyui-linkbutton"
+						iconcls="icon-upload" plain="false" onclick="ui_upload_upload();">上传
+					</a> <a id="ui_upload_bntImport" href="javascript:void(0);"
+						class="easyui-linkbutton" iconcls="icon-import" plain="false"
+						onclick="ui_upload_import();">导入 </a></td>
+				</tr>
+				<tr>
+					<td colspan="2"><a id="ui_upload_import_log" target="_blank" href="#" style="display:none;width:260px;overflow:hidden">导入结束，查看日志 </a></td>
+				</tr>
+			</table>
+		</form>
+		<div id="ui_upload_msg" style="color:red"></div>
+		<input name="filename" id="ui_upload_filename" type="hidden" />
+		<input name="importurl" id="ui_upload_importurl" type="hidden" />		 
+	</div>
+</div>
+
+<script>
+	//定时器：文件上传是否完成了
+	var ui_upload_finished = false;
+	var ui_upload_import_finished = false;
+	function ui_upload_update_file_percent() {
+		if (ui_upload_finished)
+			return;		
+		var para = {action: 'status' };
+		$.get("progressUploadServlet.do",para, function(data, textStatus) {			
+			if (data == "100" || data == 100) {
+				$('#ui_upload_loading').progressbar('setValue', 0);
+				$('#ui_upload_loading_div').css("display", "none");
+				return;
+			}
+			
+			$('#ui_upload_loading').progressbar('setValue', parseInt(data));
+			setTimeout("ui_upload_update_file_percent()", 100);
+		});
+	}
+		
+	//上传文件
+	function ui_upload_upload() {
+		 
+		var v = $("#ui_upload_fm_file").val(); 
+        if (!v || v.length==0) {
+            $.show_alert('提示', '请选择要上传的文件!');
+            $("#ui_upload_fm_file").focus();
+            return;
+        }
+		ui_upload_finished = false;
+		$("ui_upload_bntUpload").attr("disabled", "true");
+		$('#ui_upload_loading').progressbar('setValue', 0);
+		$('#ui_upload_loading_div').css("display", "block");	
+		window.setTimeout("ui_upload_update_file_percent()", 100);
+		$('#ui_upload_fm').form('submit', {
+			url : "progressUploadServlet.do?action=upload",
+			onSubmit : function() {				
+				return true;
+			},
+			success : function(data) {
+				ui_upload_finished = true;
+				$('#ui_upload_loading_div').css("display", "none");
+				$('#ui_upload_loading').progressbar('setValue', 0);
+				var obj = eval('(' + data + ')');
+				$("#ui_upload_bntUpload").attr("disabled", "false");
+				if (obj.success) {
+					$("#ui_upload_filename").val(obj.msg);					
+					$('#ui_upload_import_log').attr('href',"downloadServlet.do?action=download&filename="+obj.msg);
+					$('#ui_upload_import_log').text("上传完成，请导入！");
+					$('#ui_upload_import_log').show();					
+				}else{
+					$.show_alert("出错",obj.msg);
+				}
+				
+			}
+		});//form submit   
+	}
+	function ui_upload_import_percent() {
+		if (ui_upload_import_finished)
+			return;
+		var importurl = $('#ui_upload_importurl').val();		
+		if(!importurl ||importurl.length==0){
+			$.show_alert("提示","未设置import url!");
+			return;
+		}
+		var para = {action: 'status' };
+		$.get(importurl, para, function(data, textStatus) {
+			if (data == "100" || data == 100) {
+				$('#ui_upload_importing').progressbar('setValue', 0);
+				$('#ui_upload_importing_div').css("display", "none");
+				return;
+			}
+			$('#ui_upload_importing').progressbar('setValue', parseInt(data));
+			setTimeout("ui_upload_import_percent()", 100);
+		});
+	}
+	//上传文件
+	function ui_upload_import() {
+		
+		$('#ui_upload_import_log').hide();
+		$('#ui_upload_import_log').attr('href','#');
+		var filename = $('#ui_upload_filename').val();
+		if(!filename ||filename.length==0){
+			$.show_alert("提示","请先上传文件!");
+			return;
+		}
+		var importurl = $('#ui_upload_importurl').val();
+		if(!importurl ||importurl.length==0){
+			$.show_alert("提示","未设置import url!");
+			return;
+		}		
+		ui_upload_import_finished = false;
+		$("#ui_upload_bntImport").attr("disabled", "true");
+		$('#ui_upload_importing').progressbar('setValue', 0);
+		$('#ui_upload_importing_div').css("display", "block");				
+		setTimeout("ui_upload_import_percent()", 100);
+		var para = {};
+		para.action='import';
+		para.filename = filename;
+		$.ajax({
+			url:importurl,
+			data:para,
+			method:'POST',
+			dataType:'json',
+			success:function(data){
+				if(data.success){
+					ui_upload_import_finished = true;
+					$('#ui_upload_importing_div').css("display", "none");
+					$('#ui_upload_importing').progressbar('setValue', 0);
+					$('#ui_upload_import_log').attr('href','#');
+					$('#ui_upload_import_log').text(data.msg);
+					$('#ui_upload_import_log').show();
+					//$.show_warning("提示","导入完成！");
+					
+				}else{
+					ui_upload_import_finished = true;
+					$('#ui_upload_importing_div').css("display", "none");
+					$('#ui_upload_importing').progressbar('setValue', 0);
+					$('#ui_upload_import_log').attr('href','#');
+					$('#ui_upload_import_log').text("导入出错:" + data.msg);
+					$('#ui_upload_import_log').show();
+					//$.show_warning("提示","导入出错:" + data.msg);
+				}					
+				$("#ui_upload_bntImport").attr("disabled", "false");
+			}			
+		});		
+	}	
+</script>
+

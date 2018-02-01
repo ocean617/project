@@ -1,0 +1,100 @@
+<script type="text/javascript">	
+    
+    function ui_invigilator_teacher_init_list(planId) {
+        $("#ui_invigilator_teacher_dg").datagrid({       //初始化datagrid
+            url: "invigilatorServlet.do?action=listInvigilatorTeachers&planId="+planId,
+            striped: true, rownumbers: true,
+            idField: 'id',
+            sortName: 'regTime',
+            sortOrder: 'desc',
+            frozenColumns: [[
+                             { field: 'ck', checkbox: true }
+                             ]],
+            columns: [[
+					   { width: 100, title: '工号', field: 'no', sortable: true },
+					   { field: 'name',  title: '姓名',width: 80, sortable: true },
+					   { field: 'phone',  title: '电话',width: 80, sortable: true },                      
+                       { field: 'deptName', title: '部门', width: 150, sortable: true}               
+            	]],           
+            toolbar: '#ui_invigilator_teacher_search'     
+        });
+    }
+
+    function ui_invigilator_teacher_searchdata() {
+        var whereStr = "1=1";
+        var no = $('#ui_invigilator_teacher_search').find('[name=ui_invigilator_teacher_no]').val();
+        var name =  $('#ui_invigilator_teacher_search').find('[name=ui_invigilator_teacher_name]').val();        
+        var deptId = $('#ui_invigilator_teacher_dept').combotree('getValue');
+        if (no != "") {
+            whereStr += " and no LIKE '%" + no + "%'";
+        }
+        if (name != "") {
+            whereStr += " and name LIKE '%" + name + "%'";
+        }        
+        if (deptId != "") {
+            whereStr += " and deptId = " + deptId + "";
+        }        
+        $("#ui_invigilator_teacher_dg").datagrid('load', {where:whereStr})
+        		.datagrid('clearSelections').datagrid('clearChecked');
+    }
+    
+    function ui_invigilator_teacher_getrooms(planId){
+    	$.ajax({
+            url: 'invigilatorServlet.do',
+            data: {action:'getRooms',planId:planId},
+            type: "POST",
+            dataType: "json",
+            success: function (data) {
+                if (data.success) {
+                	$('#ui_invigilator_teacher_room_totals').text(data.msg);                           	
+                    
+                } else {                    
+                    $.show_warning("提示", data.msg);
+                }
+            }
+        });	
+    }
+</script>
+<div id="ui_invigilator_teacher_layout" class="easyui-layout" data-options="fit:true,border:false">    
+    <div data-options="region:'center',border:false">
+    	
+        <table id="ui_invigilator_teacher_dg" data-options="fit:true,border:false,footer:'#ui_invigilator_teacher_ft'">
+        </table>
+    </div>
+    <div id="ui_invigilator_teacher_ft">
+    	<table class="tableForm"
+			style="width: 100%; height: 100%; background: #F5F5F5;">
+			<tr>
+				<th>需要安排监考的考场总数:</th>
+				<td><div style="color:blue" id="ui_invigilator_teacher_room_totals">0</div></td>
+				<th>每场监考教师人数:</th>				
+				<td><input id="ui_invigilator_teacher_cntperroom" class="easyui-numberbox" value="2"
+					autocomplete="off" style="width: 60px;" data-options="required:true" /></td>
+			</tr>
+		</table>
+    </div>
+	<div id="ui_invigilator_teacher_search">
+		<table class="tableForm"
+			style="width: 100%; height: 100%; background: #F5F5F5;">
+			<tr>
+				<th>工号：</th>
+				<td><input name="ui_invigilator_teacher_no" class="easyui-textbox"
+					autocomplete="off" style="width: 130px;" /></td>
+				<th>姓名：</th>
+				<td><input name="ui_invigilator_teacher_name" class="easyui-textbox"
+					autocomplete="off" style="width: 130px;" /></td>
+				<th>部门：</th>
+				<td><input class="easyui-combotree" id="ui_invigilator_teacher_dept"
+					name="deptId"
+					data-options="url:'departmentServlet.do?action=list',lines:true,editable:false,panelHeight:'200',panelWidth:'250',required:true" />
+					<img style="cursor: pointer; vertical-align: middle;"
+					onclick="$('#ui_invigilator_teacher_dept').combotree('clear');"
+					alt="清空部门" title="清空部门" src="easyui/themes/icons/edit-clear.png" />
+				</td>
+				<td><a href="javascript:void(0);" class="easyui-linkbutton"
+					iconcls="icon-search" 
+					onclick="ui_invigilator_teacher_searchdata();">搜索</a></td>				
+			</tr>
+		</table>
+	</div>
+</div>

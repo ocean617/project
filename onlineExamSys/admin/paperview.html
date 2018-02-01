@@ -1,0 +1,95 @@
+<script>
+	
+	function paperview_genPaper(details){
+		var html="";
+		for(var i=1;i<=details.length;i++){
+			html +=paperview_genQuestionHtml(details[i-1],i,"");
+		}		
+		$('#ui_paper_view').append(html);
+		uParse('#ui_paper_view', { rootPath: 'ueditor/'});    	
+	}
+	function paperview_genQuestionHtml(detail, idx, sep){	
+		var explain = '无';
+    	var options = detail.list;
+    	var optionsdiv = "";
+		var studentAnswer ="";
+		
+		var refAnswer = detail.rightAnswer;
+    	if(detail.questionType==1){	
+   			//单选题
+   			for(var i=0;i<options.length;i++){        			          	
+           		var opt = options[i];
+           		if(opt.label==detail.answer){
+           			optionsdiv += '<div style="padding-top:5px"><input type="radio" checked name="questionoption'+detail.questionId+'" value="'+opt.id+'"/><span style="float:left;color:green">'+opt.label+'. </span>'+opt.questionOptionName + '</div>';         	                		
+           		}else{
+           			optionsdiv += '<div style="padding-top:5px"><input type="radio" name="questionoption'+detail.questionId+'" value="'+opt.id+'"/><span style="float:left;color:green">'+opt.label+'. </span>'+opt.questionOptionName + '</div>';         	                		
+           		}
+           	}           	   		
+   		}else if(detail.questionType==2){
+   			for(var i=0;i<options.length;i++){        			
+           		var opt = options[i];
+           		if(detail.answer && detail.answer.indexOf(opt.label)>=0){
+           			optionsdiv += '<div style="padding-top:5px"><input type="checkbox" checked name="questionoption'+detail.questionId+'" value="'+opt.id+'"/><span style="float:left;color:green">'+opt.label+'. </span>'+opt.questionOptionName + '</div>';         	                		
+           		}else{
+           			optionsdiv += '<div style="padding-top:5px"><input type="checkbox" name="questionoption'+detail.questionId+'" value="'+opt.id+'"/><span style="float:left;color:green">'+opt.label+'. </span>'+opt.questionOptionName + '</div>';         	                		
+           		}
+           	}
+   			//多选
+   		}else if(detail.questionType==3){
+   			//判断
+   			if(1==detail.answer){
+   				optionsdiv += '<div style="padding-top:5px"><input type="radio" checked name="questionoption'+detail.questionId+'" value="1"/><span style="float:left;color:green">正确</span></div>';
+       			optionsdiv += '<div style="padding-top:5px"><input type="radio" name="questionoption'+detail.questionId+'" value="2"/><span style="float:left;color:green">错误</span></div>';         	        		        		
+   			}else if(2==detail.answer){
+   				optionsdiv += '<div style="padding-top:5px"><input type="radio" name="questionoption'+detail.questionId+'" value="1"/><span style="float:left;color:green">正确</span></div>';
+       			optionsdiv += '<div style="padding-top:5px"><input type="radio" checked name="questionoption'+detail.questionId+'" value="2"/><span style="float:left;color:green">错误</span></div>';         	        		
+       		
+   			}else{
+   				optionsdiv += '<div style="padding-top:5px"><input type="radio" name="questionoption'+detail.questionId+'" value="1"/><span style="float:left;color:green">正确</span></div>';
+       			optionsdiv += '<div style="padding-top:5px"><input type="radio" name="questionoption'+detail.questionId+'" value="2"/><span style="float:left;color:green">错误</span></div>';         	        		        		
+   			} 
+   			refAnswer = detail.rightAnswer==1?"正确":"错误";
+   		}else if(detail.questionType==50){
+   			//复合试题
+   			var subs = detail.child;
+   			for(var i=1;subs && i<=subs.length;i++){
+				var subHtml = paperview_genQuestionHtml(subs[i-1],i,")");
+				optionsdiv += subHtml;
+			}    			
+   		}else{
+   			if(!detail.answer) detail.answer="";
+   			studentAnswer='<span style="float:left;color:blue">考生作答：</span><div>'+detail.answer+'</div><br/>';   			
+   		}   
+    	
+    	
+    	var ans = '  <div id="view_question_answer' + detail.questionId + '" style="padding-top:10px;clear:both">'+
+						studentAnswer + 
+					'   <span style="float:left;color:blue">参考答案：</span><div>'+ refAnswer + '</div>' +
+					'  </div>'  +
+					'  <div id="view_question_explain' + detail.questionId + '" style="padding-top:10px;clear:both">'+
+					'    <span style="float:left;color:blue">答案解析：</span><div>' + explain + '</div>' +
+					'  </div>' ;
+		//复合题，没有专门的学生作答和参考答案
+		if(detail.questionType==50) ans = "";
+    	
+		var html =  '<div id="ui_paper_view_question' + detail.paperId + '" style="padding:20px">' +
+					'  <div id="view_question_content' + detail.questionId + '" style="padding-top:10px;clear:both;text-valign:center">'+
+					'    <span style="float:left;color:blue">'+idx+sep+'. </span><div>'+detail.questionTitle+'</div>' +
+					'  </div>' +
+					'  <div id="view_question_option' + detail.questionId + '" style="padding-top:10px;clear:both">'+
+						optionsdiv +
+					'  </div>'  +
+						ans +
+					'</div>';
+		return html;
+	}
+</script>
+
+<div id="ui_paper_view">
+		<!-- div id="ui_paper_view_question" style="padding:20px">
+			<div id="view_question_content" style="padding-top:10px;clear:both"></div>
+			<div id="view_question_option" style="padding-top:10px;clear:both"></div>
+			<div id="view_question_answer" style="padding-top:10px;clear:both"></div>
+			<div id="view_question_explain" style="padding-top:10px;clear:both"></div>
+		</div -->
+</div>

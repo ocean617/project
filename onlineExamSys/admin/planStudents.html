@@ -1,0 +1,73 @@
+<script type="text/javascript">
+	 
+    function ui_plan_planstudent_init_list(planId) {
+        $("#ui_plan_planstudent_dg").datagrid({       //初始化datagrid
+            url: "studentServlet.do?action=search&planId="+planId,
+            striped: true, rownumbers: true, pagination: true, pageSize: 20,
+            idField: 'id',
+            sortName: 'regTime',
+            sortOrder: 'desc',
+            pageList: [20, 40, 60, 80, 100],
+            frozenColumns: [[
+                             { field: 'ck', checkbox: true }
+                             ]],
+            columns: [[
+						{ width: 100, title: '学号', field: 'no', sortable: true },
+					   { field: 'name',  title: '姓名',width: 80, sortable: true },
+					   { field: 'phone',  title: '电话',width: 80, sortable: true },                      
+                       { field: 'deptName', title: '部门(班级)', width: 150, sortable: true},
+                       { field: 'status', title: '状态', width: 60, sortable: true }                       
+            	]],           
+            toolbar: '#ui_plan_planstudent_search'     
+        });
+    }
+
+    function ui_plan_planstudent_searchdata() {
+        var whereStr = "1=1";
+        var no = $('#ui_plan_planstudent_search').find('[name=ui_plan_planstudent_no]').val();
+        var name =  $('#ui_plan_planstudent_search').find('[name=ui_plan_planstudent_name]').val();        
+        var deptId = $('#ui_plan_planstudent_dept').combotree('getValue');
+        if (no != "") {
+            whereStr += " and no LIKE '%" + no + "%'";
+        }
+        if (name != "") {
+            whereStr += " and name LIKE '%" + name + "%'";
+        }        
+        if (deptId != "") {
+            whereStr += " and deptId = " + deptId + "";
+        }        
+        $("#ui_plan_planstudent_dg").datagrid('load', {where:whereStr})
+        		.datagrid('clearSelections').datagrid('clearChecked');
+    }    
+</script>
+<div id="ui_plan_planstudent_layout" class="easyui-layout" data-options="fit:true,border:false">    
+    <div data-options="region:'center',border:false">
+        <table id="ui_plan_planstudent_dg" data-options="fit:true,border:false">
+        </table>
+    </div>
+	<div id="ui_plan_planstudent_search">
+		<table class="tableForm"
+			style="width: 100%; height: 100%; background: #F5F5F5;">
+			<tr>
+				<th>学号：</th>
+				<td><input name="ui_plan_planstudent_no" class="easyui-textbox"
+					autocomplete="off" style="width: 130px;" /></td>
+				<th>姓名：</th>
+				<td><input name="ui_plan_planstudent_name" class="easyui-textbox"
+					autocomplete="off" style="width: 130px;" /></td>
+
+				<th>部门：</th>
+				<td><input class="easyui-combotree" id="ui_plan_planstudent_dept"
+					name="deptId"
+					data-options="url:'departmentServlet.do?action=list',lines:true,editable:false,panelHeight:'200',panelWidth:'250',required:true" />
+					<img style="cursor: pointer; vertical-align: middle;"
+					onclick="$('#ui_plan_planstudent_dept').combotree('clear');"
+					alt="清空部门" title="清空部门" src="easyui/themes/icons/edit-clear.png" />
+				</td>
+				<td><a href="javascript:void(0);" class="easyui-linkbutton"
+					iconcls="icon-search" 
+					onclick="ui_plan_planstudent_searchdata();">搜索</a></td>				
+			</tr>
+		</table>
+	</div>
+</div>

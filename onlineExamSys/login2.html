@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>在线考试系统-登录</title>
+<link rel="stylesheet" type="text/css" href="admin/easyui/themes/default/easyui.css" />
+<link rel="stylesheet" type="text/css" href="admin/easyui/themes/icon.css"/> 
+<!--页面样式-->
+<link href="css/login_style.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript" src="admin/easyui/jquery.min.js"></script>
+<script type="text/javascript" src="admin/easyui/jquery.easyui.min.js" ></script>
+<script type="text/javascript" src="admin/easyui/locale/easyui-lang-zh_CN.js" ></script>  
+<style>
+* {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+#FontScroll {
+	height: 30px;
+	line-height: 30px;
+	overflow: Hidden;
+}
+
+#FontScroll .line {
+	text-align: center;
+	width: 100%;
+}
+
+#FontScroll .fontColor a {
+	color: red;
+}
+</style>
+<script>
+	
+	$(function() {		
+		$('#btnLogin').click(function() {
+			var name = $('#txtname').val();
+			var pass = $('#txtpassword').val();			
+			$('#hitmsg').hide();
+			$('#hitmsg').text("");
+			
+			$('#btnLogin').attr('disabled', "disabled"); //点击就禁用按钮，防止连击		
+			var para = {};
+			para.action = 'login';
+			para.name = name;
+			para.password = pass;			
+			$.ajax({
+				url : 'examServlet.do',
+				data : para,
+				type : "POST",
+				dataType : "json",
+				success : function(data) {
+					if (data.success) {
+						$('#btnLogin').removeAttr('disabled'); //恢复按钮
+						//confirm_dlg(data.msg);
+						var user = eval("("+data.msg+")");
+						var html = json = "<span style='font-size:16px'>登录成功！&nbsp;请确认信息是否正确？</span>"
+								+"<hr color='blue' size='1' width='80%' align='left'/>"
+								+"<h3>姓名:&nbsp;&nbsp;"+user.name+"</h3>"
+								+"<h3>学号:&nbsp;&nbsp; "+user.no+"</h3>"
+								+"<hr color='blue' size='1' width='80%' align='left' />"
+								+"<span style='font-size:16px'><a class='easyui-linkbutton' href='exam2.html' >正确,进入考场</a> &nbsp;&nbsp;&nbsp;&nbsp;"
+								+"<a class='easyui-linkbutton' href='javascript:void(0)' onclick='$(\"#hitmsg\").hide();'>错误</a>"
+								+"</span>";
+						$('#hitmsg').html(html);
+						$('#hitmsg').show();
+						/*
+						$.messager.confirm({
+							title: '信息核对',
+							msg: html,
+							ok:'正确',
+							cancel:'错误',
+							fn: function(r){
+								if (r){
+									go();
+								}
+							}
+						});	*/					                       						
+					} else {
+						$('#hitmsg').text(data.msg);
+						$('#hitmsg').show();
+						$('#btnLogin').removeAttr('disabled'); //恢复按钮	
+					}
+				}
+			});
+		});
+	});
+</script>
+</head>
+
+<body>
+	<div class="top">
+		<div>
+			<img src="images/logo_school.png" /> <img src="images/logo.png" />
+
+		</div>
+		<div class="bg_div">
+			<img src="images/loginBg.png" class="bgimage" />
+		</div>
+		<div class="login" id="login">
+
+			<br />
+			<div class="login_from">
+				<form id="fmLogin" action="exam3.html" method="post">
+					<br />
+					<p align="center">
+						<img src="images/user_ioc.png" width="15" height="15" /> 用户名:<input
+							id="txtname" type="text" value="请输入..."
+							onFocus="if(value==defaultValue){value='';this.style.color='#000'}"
+							onBlur="if(!value){value=defaultValue;this.style.color='#999'}"
+							style="color: #999999" />
+					</p>
+					<br />
+					<p align="center">
+						<img src="images/pass_ioc.png" width="15" height="15" />
+						密&nbsp;&nbsp;&nbsp;&nbsp;码:<input type="password" id="txtpassword" /><br />
+					</p>									
+					<br /> <input type="button" id="btnLogin" value="登录"
+						class="btn btn1 btn-default" /><br />
+					<div id="hitmsg" style="color:red;display:none;padding-left:20px"></div>
+				</form>
+			</div>
+		</div>
+		<div align="center" class="bottom_i">©2016-2026 长沙民政职业技术学院 版权所有
+			联系电话：0731-82763288</div>
+	</div>
+</body>
+</html>

@@ -1,0 +1,105 @@
+/* CSS Document */
+body {
+	margin: 0px;
+	padding: 0px;
+	background-color: #BDDBFF;
+	font-size: 12px;	
+}
+
+.top {
+	position: absolute;
+	width: 900px;;
+	height: 320px;
+	top: 10%;
+	left: 50%;
+	margin-left: -450px;
+}
+
+.login_gg {
+	margin-top: 40px;
+	width: 320px;
+	text-align: center;
+}
+
+.bg_div {
+	width: 900px;
+	height: 300px;
+	position: relative;
+	margin-top: 5%;
+	border: 2px #8ABFFF solid;
+	border-radius: 10px;
+	background-color: #9FCBFF;
+}
+
+.bgimage {
+	width: 99%;
+	height: 99%;
+	position: relative;
+	left: 5px;
+	top: 1px;
+	bottom: 1px;
+	margin: 0 auto;
+}
+
+.login {
+	border: 2px #8ABFFF solid;
+	border-radius: 5px;
+	position: relative;
+	width: 360px;
+	height: 320px;
+	background-color: #fff;
+	margin-top: -315px;
+	float: right;
+	margin-right: 25px;
+	background-image: url(../images/login_bg.png);
+	background-repeat: repeat;
+}
+
+.bottom_i {
+	margin-top: 5%;
+	font-family: "Courier New", Courier, monospace;
+	font-size: 12px;
+	color: #666;
+}
+
+.login_from {
+	position: relative;
+	top: 15%;
+	margin-top: 30px;
+}
+
+.btn1 {
+	width: 70px;
+	height: 30px;
+	background-image: url(../images/btn.png);
+	background-repeat: no-repeat;
+	border: 1px #8ABFFF solid;
+	border-radius: 5px;
+	position: relative;
+	left: 50%;
+	margin-left: -40px;
+}
+
+.add_cart_radio {
+	margin-top: 0.5em;
+	margin-right: 0.5em;
+}
+
+.add_cart_radio input[type="radio"] {
+	display: none;
+}
+
+.add_cart_radio input[type="radio"]+label {
+	padding: 0.2em 1em;
+	border: 1px solid #CCCCCC;
+	border-radius: 0.5em;
+	color: #999;
+}
+
+.add_cart_radio input[type="radio"]:checked+label {
+	padding: 0.2em 1em;
+	border: 1px solid #FF6600;
+	border-radius: 0.5em;
+	background: #FF6600;
+	color: #FFFFFF;
+}

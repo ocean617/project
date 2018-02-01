@@ -1,0 +1,384 @@
+<script type="text/javascript">
+    var ui_score_oldSelectPlanId;
+    $(function () {
+    	ui_score_oldSelectPlanId = -1;
+    	ui_score_init_list();
+    });
+    function ui_score_init_list(toolbar) {
+        $("#ui_score_dg").datagrid({       //初始化datagrid
+            url: "planServlet.do?action=search",
+            striped: true, rownumbers: true, singleSelect: true,
+            idField: 'id',
+            sortName: 'beginTime',
+            sortOrder: 'desc',
+            pagination: true,
+            pageSize: 20,
+            pageList: [20, 40, 60, 80, 100],  
+            frozenColumns: [[
+                             { field: 'ck', checkbox: true }                             
+                         ]],
+            columns: [[
+					{ width: 200, title: '考试名称',  field: 'name', sortable: true },					
+					{ width: 150, title: '开考时间',  field: 'beginTime', sortable: true },
+					{ width: 60,  title: '考试时长',  field: 'duration' },
+                    { width: 80,  title: '模式', field: 'examPattern', 
+                        formatter: function (value, row, index) {
+                        	return value=="1" ? "同批不同题":"同批同题";
+                        }
+                    },
+                    { width: 60,  title: '公开结果',  field: 'isShowResult',
+                        formatter: function (value, row, index) {
+                            return value=="1" ? "公开":"不公开";
+                        }
+                    },
+                   
+					{ width: 80, title: '计划人',  field: 'teacherName', sortable: true }
+                    ]],           
+            toolbar: '#ui_score_tb',
+        onSelect: function (rowIndex, rowData) {
+            if (ui_score_oldSelectPlanId == rowData.id) {  //点选的是相同的角色就不再请求数据
+                return;
+            }
+            ui_score_oldSelectPlanId = rowData.id;   
+
+            var $ui_score_layout = $("#ui_score_layout");
+            var eastRoleUser = $ui_score_layout.layout("panel", "east");
+
+            if (eastRoleUser.panel("options").collapsed) {   //判断是否展开
+                $ui_score_layout.layout("expand", "east");
+            }
+            eastRoleUser.panel("setTitle", "【"+rowData.name + "】考生成绩");
+            if ($("#ui_score_user_dg").data("datagrid")) {
+                $("#ui_score_user_dg").datagrid({       //请求数据
+                    url: "scoreServlet.do?action=search&planId=" + ui_score_oldSelectPlanId
+                }).datagrid('clearSelections').datagrid('clearChecked');
+            }
+            else {
+                $("#ui_score_user_dg").datagrid({       //初始化datagrid
+                	url: "scoreServlet.do?action=search&planId=" + ui_score_oldSelectPlanId,
+                    striped: true,
+                    rownumbers: true,
+                    pagination: true,
+                    pageSize: 20,
+                    singleSelect: true,
+                    idField: 'studentId',
+                    sortName: 'no',
+                    sortOrder: 'asc',
+                    pageList: [20, 40, 60, 80, 100],     
+                    frozenColumns: [[
+                                     { field: 'ck', checkbox: true }                             
+                                 ]],
+                    columns: [[						
+					   { field: 'no',  title: '学号',width: 80, sortable: true },
+                       { field: 'name',  title: '姓名',width: 80, sortable: true },
+					   { field: 'depname',  title: '班级',width: 80, sortable: true },
+                       { field: 'planName', title: '考试名称', width: 150, sortable: true},
+                       { field: 'grade', title: '成绩', width: 60, sortable: true,
+                           formatter: function (value, row, index) {
+                               return value < row.passScore ? "<font color='red'>"+value+"</font>":value;
+                           }
+                       },
+                       { field: 'courseName', title: '课程名称', width: 150, sortable: true}
+                    ]],
+                    toolbar:[{
+                    	text: '单个阅卷',
+                        iconCls: 'icon-judge',
+                        handler: function () { ui_score_user_singlejudge(); }
+                    },{
+                    	text: '查看试卷',
+                        iconCls: 'icon-view',
+                        handler: function () { ui_score_user_viewPaper(); }
+                    }]
+                });
+            }
+        }
+    
+        });
+
+    }
+    //自动评分
+    function ui_score_autojudge() {
+    	var rows = $("#ui_score_dg").datagrid("getChecked");
+        if (rows.length < 1) {
+            $.show_warning("提示", "请先选择要自动评阅的考试");
+            return;
+        }
+        if (rows.length > 1) {
+            $.show_warning("提示", "不支持批量自动评阅，请只选择一个考试！");
+            $("#ui_score_dg").datagrid('clearSelections').datagrid('clearChecked');
+            return;
+        }
+        var row = rows[0];  
+        $('#ui_score_dlg_waiting').dialog({         	
+      		modal: true,
+      		title:'提示',
+      		width:200,
+      		height:60
+      		}).dialog("open");
+        $.ajax({
+            url: 'scoreServlet.do',
+            data: {action:'autojudges', planId:row.id},
+            type: "POST",
+            dataType: "json",
+            success: function (data) {
+            	$('#ui_score_dlg_waiting').dialog("close");
+                if (data.success) {                	
+                	$("#ui_score_user_dg").datagrid('reload').datagrid('clearSelections').datagrid('clearChecked');
+                	$.show_warning("提示", data.msg);                   
+                } else {
+                    $.show_warning("提示", data.msg);
+                }
+                
+            }
+        });
+    }
+    
+    /*
+    *导出成绩，直接打开excel文件
+    */
+    function ui_score_export() {		
+		var rows = $("#ui_score_dg").datagrid("getChecked");
+        if (rows.length < 1) {
+            $.show_warning("提示", "请先选择要导出成绩的考试");
+            return;
+        }
+        if (rows.length > 1) {
+            $.show_warning("提示", "不支持批量导出多个考试成绩，请只选择一个考试！");
+            $("#ui_score_dg").datagrid('clearSelections').datagrid('clearChecked');
+            return;
+        }
+        var row = rows[0];  
+        var t = (new Date()).getTime();
+		var url = "scoreServlet.do?action=export&planId="+row.id+"&planName="+row.name+"&t="+t;							
+		$('#ui_score_export_excel').attr('src', url);
+	}
+	
+	/*
+	*原来的导出，已经不用
+	*/
+    function ui_score_export_old(){
+    	var rows = $("#ui_score_dg").datagrid("getChecked");
+        if (rows.length < 1) {
+            $.show_warning("提示", "请先选择要导出成绩的考试");
+            return;
+        }
+        if (rows.length > 1) {
+            $.show_warning("提示", "不支持批量导出多个考试成绩，请只选择一个考试！");
+            $("#ui_score_dg").datagrid('clearSelections').datagrid('clearChecked');
+            return;
+        }
+        var row = rows[0];  
+    	$('<div/>').dialog({			
+			id : "ui_score_common_dialog",
+			href : 'export.html',
+			title : '成绩导出',
+			iconCls : 'icon-export',
+			height : 150,
+			width : 320,
+			modal : true,
+			buttons : [ {				
+				iconCls : 'icon-cancel',
+				text : '关闭',
+				handler : function() {
+					$("#ui_score_common_dialog").dialog('destroy'); //销毁dialog对象	
+				}
+			} ],
+			onLoad : function() {	
+				$('#ui_export_hitting').text('正在导出文件，请稍候...');
+				$('#ui_export_download').hide();
+				var para = {};
+				para.action='export';
+				para.planId=row.id;
+				para.planName = row.name;
+				$.ajax({
+					url:'scoreServlet.do',
+					method:'POST',
+					dataType:'json',
+					data:para,
+					success:function(data){
+						if(data.success){
+							$('#ui_export_hitting').text('导出结束，请点击文件下载！');
+							$('#ui_export_url').attr("href","downloadServlet.do?action=download&filename="+data.msg);
+							$('#ui_export_url').text("成绩下载");
+							$('#ui_export_download').show();
+							
+						}else{
+							$.show_warning("提示",data.msg);
+						}
+					}
+				});	
+			},
+			onClose : function() {
+				$("#ui_score_common_dialog").dialog('destroy'); //销毁dialog对象
+			}
+		});		
+    }
+    //给单个学生重新评阅
+    function ui_score_user_singlejudge() {
+    	var rows = $("#ui_score_user_dg").datagrid("getChecked");
+        if (rows.length < 1) {
+            $.show_warning("提示", "请先选择要重新评阅的学生");
+            return;
+        }
+        if (rows.length > 1) {
+            $.show_warning("提示", "不支持批量新评阅，请只选择一个学生！");
+            $("#ui_score_user_dg").datagrid('clearSelections').datagrid('clearChecked');
+            return;
+        }
+        var row = rows[0];  
+        $.ajax({
+            url: 'scoreServlet.do',
+            data: {action:'autojudge', planId:ui_score_oldSelectPlanId, studentId: row.studentId},
+            type: "POST",
+            dataType: "json",
+            success: function (data) {
+                if (data.success) {                	
+                	$("#ui_score_user_dg").datagrid('reload').datagrid('clearSelections').datagrid('clearChecked');
+                	$.show_warning("提示", data.msg);                   
+                } else {
+                    $.show_warning("提示", data.msg);
+                }
+            }
+        });
+                  
+    }
+    
+    /*
+   		 考试基本情况统计
+    */
+    function ui_score_statistic(){
+    	var rows = $("#ui_score_dg").datagrid("getChecked");
+        if (rows.length < 1) {
+            $.show_warning("提示", "请先选择考试");
+            return;
+        }
+        if (rows.length > 1) {
+            $.show_warning("提示", "不支持批量统计，请只选择一个考试！");
+            $("#ui_score_dg").datagrid('clearSelections').datagrid('clearChecked');
+            return;
+        }
+        var row = rows[0];  
+    	$('<div/>').dialog({			
+			id : "ui_score_common_dialog",
+			href : 'scoreStatistic.html',
+			title : "【"+row.name+"】基本情况",
+			iconCls : 'icon-sum',
+			height : 240,
+			width : 380,
+			modal : true,
+			buttons : [ {				
+				iconCls : 'icon-cancel',
+				text : '关闭',
+				handler : function() {
+					$("#ui_score_common_dialog").dialog('destroy'); //销毁dialog对象	
+				}
+			} ],
+			onLoad : function() {	
+				$('#ui_score_stat_hitting').text('正在统计，请稍候...');
+				$('#ui_score_stat_hitting').show();
+				$('#ui_score_stat_table').hide();
+				var para = {};
+				para.action='statistics';
+				para.planId=row.id;
+				para.planName = row.name;
+				$.ajax({
+					url:'scoreServlet.do',
+					method:'POST',
+					dataType:'json',
+					data:para,
+					success:function(data){
+						if(data && data.behooveCount>0){
+							$('#ui_score_stat_hitting').text("【"+row.name+"】基本情况");
+							$('#ui_score_stat_editform').form('load',data);
+							$('#ui_score_stat_hitting').hide();
+							$('#ui_score_stat_table').show();							
+						}else{
+							$('#ui_score_stat_hitting').text('暂无考试数据！');							
+						}
+					}
+				});	
+			},
+			onClose : function() {
+				$("#ui_score_common_dialog").dialog('destroy'); //销毁dialog对象
+			}
+		});	
+    }
+	    
+    function ui_score_user_viewPaper(){
+    	var rows = $("#ui_score_user_dg").datagrid("getChecked");
+        if (rows.length < 1) {
+            $.show_warning("提示", "请先勾选要查阅试卷的考生");
+            return;
+        }
+        if (rows.length != 1) {
+            $.show_warning("提示", "请选择一位考生！");
+            $("#ui_score_user_dg").datagrid('clearSelections').datagrid('clearChecked');  
+            return;
+        }
+        var studentId = rows[0].studentId;
+        var para = {};
+        para.action = "getAPaper";
+        para.timespan = new Date().getTime();        
+        para.planId = ui_score_oldSelectPlanId;
+        para.studentId = studentId;
+        var title = "查看考生["+ rows[0].name+"]试卷";
+        $.ajax({
+            url: 'assignServlet.do',
+            data: para,
+            type: "POST",
+            dataType: "json",
+            success: function (data) {
+                if (data && data.length) {                	
+                	$("<div/>").dialog({
+                        id: "ui_score_common_dialog",
+                        href: "paperview.html",
+                        title: title,
+                        iconCls: "icon-view",
+                        height: 600,
+                        width: 800,
+                        modal: true,
+                        buttons: [{
+                            id: "ui_score_common_dialog_btn",
+                            iconCls: "icon-cancel",
+                            text:"关闭" ,
+                            handler: function () {
+                                $('#ui_score_common_dialog').dialog("close");
+                            }
+                        }],
+                        onLoad: function () {        	
+                        	paperview_genPaper(data);
+                        },
+                        onClose: function () {
+                            $("#ui_score_common_dialog").dialog('destroy');  //销毁dialog对象
+                        }
+                    });
+                } else {
+                    $.show_warning("提示", data.msg);
+                }
+            }
+        });
+        
+    }
+    
+    
+</script>
+<div id="ui_score_layout" class="easyui-layout" data-options="fit:true,border:false">
+	<div style="display:none"><iframe id="ui_score_export_excel" style="display:none"></iframe></div> 
+	<div id="ui_score_dlg_waiting" >正在自动评分，请耐心等待...</div>
+    <div data-options="region:'east',split:true,border:true,collapsed:true" title="角色成员"
+        style="width: 50%;">
+        <table id="ui_score_user_dg" data-options="fit:true,border:false">
+        </table>
+        <div id="ui_score_tb">
+        <a href="javascript:void(0)" class="easyui-linkbutton" plain="true" data-options="iconCls:'icon-machine'," onclick="ui_score_autojudge()" >自动评阅</a>
+        <a href="javascript:void(0)" class="easyui-linkbutton" plain="true" data-options="iconCls:'icon-export'," onclick="ui_score_export()" >导出成绩</a>
+        <a href="javascript:void(0)" class="easyui-linkbutton" plain="true" data-options="iconCls:'icon-sum'," onclick="ui_score_statistic()" >基本情况</a>
+        	
+        </div>
+        
+    </div>
+    <div data-options="region:'center',border:false">
+        <table id="ui_score_dg" data-options="fit:true,border:false">
+        </table>
+    </div>
+</div>

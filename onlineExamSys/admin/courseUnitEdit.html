@@ -1,0 +1,54 @@
+﻿<div style="padding: 15px; overflow: hidden">
+    <form id="ui_course_unit_editform" method="post">
+    <table class="tableForm" style="width:100%">
+    	<tr>
+            <th>
+               课程名称：
+            </th>
+            <td>
+                <input type="hidden" name="courseId" id="ui_course_unit_courseid_edit" />
+                <input type="text" name="courseName" id="ui_course_unit_coursename_edit" disabled="disabled"
+                    class="easyui-textbox"/>
+            </td>
+        </tr>
+        <tr>
+            <th>
+               单元名称：
+            </th>
+            <td>
+                <input type="hidden" name="id" id="ui_course_unit_id_edit" />
+                <input type="text" name="name" id="ui_course_unit_name_edit"
+                    class="easyui-textbox" data-options="required:true" autocomplete="off" />
+            </td>
+        </tr>
+        <tr>
+            <th>
+                上级单元：
+            </th>
+            <td>
+                <input class="easyui-combotree" name="pid" id="ui_course_unit_parentid_edit" />
+                <img style="cursor: pointer; vertical-align: middle;" onclick="$('#ui_course_unit_parentid_edit').combotree('clear');"
+                    alt="清空父节点" title="清空父节点" src="easyui/themes/icons/edit-clear.png" />
+            </td>
+        </tr>
+        <tr>
+            <th>
+                排序：
+            </th>
+            <td>
+                <input name="seqNo" id="ui_course_unit_sort_edit" class="easyui-numberspinner" style="width: 70px;"
+                    value="10" data-options="min:1,max:100,editable:true">
+            </td>
+        </tr>
+        
+        <tr>
+            <th>
+                说明：
+            </th>
+            <td>
+                <textarea  rows="2" cols="30" name="remark" id="ui_course_unit_remark_edit"></textarea>
+            </td>
+        </tr>               
+    </table>
+    </form>
+</div>

@@ -1,0 +1,30 @@
+﻿<div style="padding: 15px; overflow: hidden">
+    <form id="ui_user_changepwd_form" method="post">
+        <table class="tableForm" style="width: 100%">
+            <tr>
+                <th>原密码：
+                </th>
+                <td>
+                    <input type="password" name="oldpwd" id="ui_user_changepwd_originalpwd"
+                        class="easyui-textbox" data-options="required:true" />
+                </td>
+            </tr>
+            <tr>
+                <th>新密码：
+                </th>
+                <td>
+                    <input type="password" name="newpwd" id="ui_user_changepwd_newpwd"
+                        class="easyui-textbox" data-options="required:true" />
+                </td>
+            </tr>
+            <tr>
+                <th>确认密码：
+                </th>
+                <td>
+                    <input type="password" name="confirmpwd" id="ui_user_changepwd_confirmpwd"
+                        class="easyui-textbox" data-options="required:true, validType:'eqPwd[\'#ui_user_changepwd_form input[name=newpwd]\']'" />
+                </td>
+            </tr>
+        </table>
+    </form>
+</div>

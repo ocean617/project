@@ -1,0 +1,39 @@
+<div style="padding: 1px; overflow: hidden">
+    <form id="ui_strategy_editform" method="post">
+        <table class="tableForm" style="width: 100%">
+        	<tr>
+                <th>所属课程：
+                </th>
+                <td>
+                   <input id="ui_strategy_course_edit" name="courseId" />
+                   <input id="ui_strategy_course_name_edit" name="courseName" style="display:none" />
+                </td>
+            </tr>
+        	<tr>
+                <th>组卷策略名称：
+                </th>
+                <td>
+                    <input type="hidden" name="id" id="ui_strategy_id_edit" />
+                    <input type="text" name="name" id="ui_strategy_name_edit" class="easyui-textbox"
+                        data-options="required:true" autocomplete="off"  style="width:95%"/>
+                </td>
+            </tr>
+
+            <tr>
+                <th>试卷总分：
+                </th>
+                <td>
+                    <input type="text" name="totalScore" value="100" id="ui_strategy_totalScore_edit" class="easyui-numberbox" data-options="required:true"  />
+                </td>
+            </tr>
+            <tr>
+                <th>及格分数：
+                </th>
+                <td>
+                    <input type="text" name="passScore" value="60" id="ui_strategy_passScore_edit" class="easyui-numberbox" data-options="required:true" />
+                </td>
+            </tr>
+  
+        </table>
+    </form>
+</div>

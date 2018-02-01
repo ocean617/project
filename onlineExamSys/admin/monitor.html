@@ -1,0 +1,142 @@
+<script type="text/javascript">
+
+	$(function(){
+		$("#ui_monitor_dg").datagrid({       //初始化datagrid
+        	url: "monitorServlet.do?action=search",
+            striped: true,
+            rownumbers: true,
+            pagination: true,
+            pageSize: 20,
+            singleSelect: true,
+            idField: 'id',
+            sortName: 'studentId',
+            sortOrder: 'asc',
+            pageList: [20, 40, 60, 80, 100],  
+            
+            frozenColumns: [[
+                             { field: 'ck', checkbox: true }                             
+                         ]],
+            columns: [[						
+			   { field: 'no',  title: '学号',width: 80, sortable: true },
+               { field: 'studentName',  title: '姓名',width: 80, sortable: true },
+			   { field: 'examRoomName',  title: '考场',width: 80, sortable: true },
+               { field: 'seatNo', title: '座位', width: 60, sortable: true},
+               { field: 'examstatus', title: '状态', width: 150, sortable: true, 
+                   formatter: function (value, row, index) {
+                	   if(value==1) return "已生成试卷";
+                	   else if(value==2) return "答题中";
+                	   else if(value==3) return "已提交试卷";
+                	   else if(value==0) return "未生成试卷";
+                   }
+               },
+               { field: 'loginTime', title: '登录时间', width: 150, sortable: true},
+               { field: 'overTime', title: '延时', width: 60, sortable: true},
+               { field: 'loginIp', title: '登录IP', width: 150, sortable: true},
+               { field: 'submitTime', title: '交卷时间', width: 150, sortable: true}
+               
+            ]],
+            toolbar:'#ui_monitor_tb'
+        });
+		
+	});
+	
+	function ui_monitor_delay(){
+		var rows = $("#ui_monitor_dg").datagrid("getChecked");
+        if (rows.length < 1) {
+            $.show_warning("提示", "请先勾选要延时的考生！");
+            return;
+        }
+        $("#ui_monitor_delay_dlg").dialog({            
+            title: "给考生延时",            
+            iconCls: "icon-delay",
+            height: 100,
+            width: 200,
+            modal: true,
+            buttons: [{
+                id: "ui_monitor_delay_dlg_btn",
+                iconCls: 'icon-ok',
+                text:'延时',
+                handler: function () {
+                	var para = {};
+                    para.action = "delay";
+                    para.minitue = $('#ui_monitor_delay').numberbox("getValue");
+                    para.timespan = new Date().getTime();
+                    var ids = [];
+                    $.each(rows, function (i, row) {
+                        ids.push(row.id);
+                    });
+                    para.ids = ids.join(",");
+                    $.ajax({
+                        url: "monitorServlet.do",
+                        data: para,
+                        type: "POST",
+                        dataType: "json",
+                        success: function (data) {
+                            if (data.success) {
+                                $.show_warning("提示", data.msg);
+                                
+                                $("#ui_monitor_dg").datagrid("reload").datagrid('clearSelections').datagrid('clearChecked');
+                                $('#ui_monitor_delay_dlg').dialog("close");
+                            } else {
+                                $.show_warning("提示", data.msg);
+                            }
+                        }
+                    });
+                }
+            }]
+        });                
+	}
+	
+	function getWhere(){
+		var where = "1=1";
+		var planid = $('#ui_monitor_examplanId').combobox("getValue");
+		var roomid = $('#ui_monitor_roomId').combobox("getValue");
+		var status = $('#ui_monitor_examstatus').combobox("getValue");		
+		if (planid)
+			where += ' AND examplanId=' + planid;
+		if (roomid)
+			where += ' AND examRoomId=' + roomid;
+		if (status && status.length>0)
+			where += ' AND examstatus=' + status;
+
+		return where;
+	}
+	
+	function ui_monitor_search(){
+		var where = getWhere();
+		$("#ui_monitor_dg").datagrid("load", {
+			where : where
+		}).datagrid('clearSelections').datagrid('clearChecked');
+	}
+
+</script>
+<div id="ui_monitor_layout" class="easyui-layout" data-options="fit:true,border:false">
+    <div data-options="region:'center',border:false">
+        <table id="ui_monitor_dg" data-options="fit:true,border:false">
+        </table>
+    </div>
+	<div id="ui_monitor_tb">
+		<div>
+			<a href="javascript:void(0)" class="easyui-linkbutton" plain="true"
+				data-options="iconCls:'icon-add'," onclick="ui_monitor_delay()">考试延时</a>			
+			<a href="javascript:void(0)" class="easyui-linkbutton" plain="true">|</a> 
+
+			考试计划: <input id="ui_monitor_examplanId" class="easyui-combobox" data-options="url:'planServlet.do?action=listInvigilator',textField:'name',valueField:'id',editable:false,panelHeight:'200'" /> 
+			<img style="cursor: pointer; vertical-align: middle;" onclick="$('#ui_monitor_examplanId').combobox('clear');"
+				alt="清空考试计划" title="清空考试计划" src="easyui/themes/icons/edit-clear.png" />
+			考场: <input id="ui_monitor_roomId" class="easyui-combobox"  data-options="url:'roomServlet.do?action=listMyRomm',textField:'roomAddr',valueField:'id',editable:false,panelHeight:'200'"  /> 
+				<img style="cursor: pointer; vertical-align: middle;" onclick="$('#ui_monitor_roomId').combobox('clear');"
+				alt="清空考场" title="清空考场" src="easyui/themes/icons/edit-clear.png" />
+			考试状态: <select name="examstatus" id="ui_monitor_examstatus"  class="easyui-combobox" data-options="panelHeight:'auto',editable:false">
+                	<option value="">全部</option>
+                	<option value="0">未生成试卷</option>
+                	<option value="1">试卷已生成</option>
+                	<option value="2">考试中</option>
+                	<option value="3">已交卷</option>
+                </select>
+			<a href="javascript:void(0)" class="easyui-linkbutton" onclick="ui_monitor_search()" iconCls="icon-search">查询</a>
+		</div>
+		
+		<div id="ui_monitor_delay_dlg" style="display:none">延时(分钟):<input type="text" class="easyui-numberbox" style="width:60px" id="ui_monitor_delay" value="5" /></div>
+	</div>
+</div>

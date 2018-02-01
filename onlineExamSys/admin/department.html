@@ -1,0 +1,132 @@
+﻿<script type="text/javascript">
+    var oldSelectDepartmentId;
+    $(function () {
+    	oldSelectDepartmentId = -1;
+    	ui_department_init_list();
+    });
+
+    function ui_department_init_list(toolbar) {
+        $("#ui_department_tg").treegrid({       //初始化treegrid
+            url: "departmentServlet.do?action=list",
+            idField: 'id',
+            treeField: 'text',
+            rownumbers: true,
+            columns: [[
+                        { field: 'text', title: '部门名称', width: 250 },
+                        { field: 'code', title: '部门编码', width: 100 , sortabe:true}, 
+                        { field: 'type', title: '类型', width: 80, sortabe:true, 
+                        	formatter: function (value, row, index) {     
+	                        	if(value==2) return "班级";
+	                        	else return "机构";
+                        	}
+                        }, 
+                        { field: 'isClosed', title: '状态', width: 80, 
+                        	formatter: function (value, row, index) {     
+	                        	if(value==1) return "关闭";
+	                        	else return "开放";
+                        	} 
+                        }
+            	]],
+            toolbar: [{
+                text: '添加',
+                iconCls: 'icon-add',
+                handler: function () { ui_department_add(); }
+            }, {
+                text: '修改',
+                iconCls: 'icon-edit',
+                handler: function () { ui_department_edit(); }
+            }, {
+                text: '删除',
+                iconCls: 'icon-remove',
+                handler: function () { ui_department_delete() }
+            }, '-', {
+                text: '展开',
+                iconCls: 'icon-expand',
+                handler: function () { ui_department_expandall() }
+            }, {
+                text: '折叠',
+                iconCls: 'icon-collapse',
+                handler: function () { ui_department_collapseall() }
+            }],
+        });
+    }
+    //添加部门
+    function ui_department_add() {
+    	ui_dg_add_edit('添加部门','ui_department','departmentServlet.do','departmentEdit.html','add',460,280,
+        		function(){	//fnSuccess
+        		 	$("#ui_department_tg").treegrid("reload");
+        		},
+        		function(){//fnLoad
+        			var row = $("#ui_department_tg").treegrid("getSelected");
+	        		if(row){
+		        		$('#ui_department_parentid_edit').combotree("setValue",row.id);
+		        	}
+        		},
+        		null
+        		);   
+    }
+    //修改部门
+    function ui_department_edit() {
+        var row = $("#ui_department_tg").treegrid("getSelected");
+        if (!row) {
+            $.show_warning("提示", "请先选择要修改的部门");
+            return;
+        }
+        ui_dg_add_edit('修改部门','ui_department','departmentServlet.do','departmentEdit.html','edit',460,280,
+        		function(){	//fnSuccess
+        		 	$("#ui_department_tg").treegrid("reload");
+        		},
+        		function(){//fnLoad
+        			row.icon = row.iconCls;
+        			row.name=row.text;
+        			$('#ui_department_editform').form('load',row);
+        		},
+        		null
+        		);       
+    }
+    //删除部门
+    function ui_department_delete() {
+        var row = $("#ui_department_tg").datagrid("getSelected");
+        if (!row) {
+            $.show_warning("提示", "请先勾选要删除的部门");
+            return;
+        }
+        
+        $.messager.confirm('提示', '确定删除：' + row.text + '？如果有子部门也会同时删除！', function (r) {
+            if (r) {                
+                para = {};
+                para.action = "delete";
+                para.timespan = new Date().getTime();
+                para.ids = row.id;
+
+                $.ajax({
+                    url: "departmentServlet.do",
+                    data: para,
+                    type: "POST",
+                    dataType: "json",
+                    success: function (data) {
+                        if (data.success) {
+                            $.show_warning("提示", "删除成功！");
+                            $("#ui_department_tg").treegrid("reload");                            
+                        } else {
+                            $.show_warning("提示", data.msg);
+                        }
+                    }
+                });
+            }
+        });
+    }
+    
+    function ui_department_expandall() {
+        $("#ui_department_tg").treegrid("expandAll");
+    }
+    function ui_department_collapseall() {
+        $("#ui_department_tg").treegrid("collapseAll");
+    }
+</script>
+<div id="ui_department_layout" class="easyui-layout" data-options="fit:true,border:false">
+    <div data-options="region:'center',border:false">
+        <table id="ui_department_tg" data-options="fit:true,border:false">
+        </table>
+    </div>
+</div>

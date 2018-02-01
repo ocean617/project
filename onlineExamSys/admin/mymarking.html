@@ -1,0 +1,263 @@
+<script src="easyui/datagrid-cellediting.js"></script>
+<script type="text/javascript">
+	var oldSelectCourse;
+	var editIndex = undefined;	
+    $(function () {
+    	oldSelectCourse = -1;    
+    	ui_mymarking_loading = false;   
+    	ui_mymarking_init_list();
+    });
+
+	function ui_mymarking_saveScore(paperId,ov){
+		var nv = $("#ui_score"+paperId).val();	
+		if(isNaN(nv)){
+			$.show_alert("提示","请输入数字!");
+			$("#ui_score"+paperId).focus();
+			return;
+		}
+		var maxv = $("#ui_score"+paperId).attr("maxv");	
+		maxv = 	parseFloat(maxv);
+		nv = parseFloat(nv);
+		if(nv>maxv){
+			$("#ui_score"+paperId).val(maxv);
+			nv = maxv;
+		}
+		//if(nv==ov) return;
+		var data = [];
+		data.push(paperId + "\t" + nv);            			
+    	$.ajax({
+			url:'markingServlet.do',
+			type:'POST',
+			dataType:'json',
+			data:{action:'saveMark',data:data.join(',')},
+			success:function(ret){
+				if(!ret.success){
+					$.show_warning("提示",ret.msg);
+				}				
+			}
+		});
+	}
+    function ui_mymarking_init_list(){
+    	var cardview = $.extend({}, $.fn.datagrid.defaults.view, {
+            renderRow: function(target, fields, frozen, rowIndex, rowData){
+                var cc = [];
+                cc.push('<td colspan=' + fields.length + ' style="padding:10px 5px;border:0;width:1024px">');
+                if (!frozen && rowData.paperId){                    
+                    cc.push('<div style="float:left;margin-left:20px;width:100%">');
+                    /*
+                    for(var i=0; i<fields.length; i++){
+                        var copts = $(target).datagrid('getColumnOption', fields[i]);
+                        cc.push('<p><span class="c-label">' + copts.title + ':</span> ' + rowData[fields[i]] + '</p>');
+                    }
+                    */
+                    var copts = $(target).datagrid('getColumnOption', 'questionTitle');
+                    cc.push('<p><span class="c-label">('+(rowIndex+1)+')题干:</span> ' + rowData['questionTitle'] + '</p>');                    
+                    cc.push('<p><span class="c-label">参考答案:</span> ' + rowData['rightAnswer'] + '</p>');
+                    cc.push('<p><span class="c-label">考生答案:</span><textarea style="width:90%;overflow-y:visible" readonly onfocus="$(this).height(this.scrollHeight);">' + rowData['answer'] + '</textarea></p>');
+                    cc.push('<p><span class="c-label">本题分值:</span> ' + rowData['refscore'] + '</p>');
+                    //cc.push('<p><span class="c-label"><font color="red">考生得分:</font></span><input type="text" style="width:40px" name="ui_score" data-options="events:{blur: onSelectBtypeComboBox(#ui_score'+rowData['paperId']+','+rowData['score']+')},min:0,precision:1,max:'+rowData['refscore']+'" id="ui_score'+rowData['paperId']+'" value="' + rowData['score'] + '" /></p>');                    
+                    cc.push('<p><span class="c-label"><font color="red" size="10">考生得分:</font></span><input type="text" style="width:40px" name="ui_score" onblur="ui_mymarking_saveScore('+rowData['paperId']+','+rowData['score']+')" maxv="'+rowData['refscore']+'" id="ui_score'+rowData['paperId']+'" value="' + rowData['score'] + '" /></p>');     
+                    cc.push('</div>');
+                }
+                cc.push('</td>');
+                return cc.join('');
+            },
+            /*
+            onAfterRender:function(target){               	         
+            	$('[name=ui_score]').numberbox({
+            		onChange:function(nv,ov){
+            			var id = $(this).attr("id");
+            			var paperId = id.substring(8);
+            			var data = [];
+            			data.push(paperId + "\t" + nv);            			
+            	    	$.ajax({
+            				url:'markingServlet.do',
+            				type:'POST',
+            				dataType:'json',
+            				data:{action:'saveMark',data:data.join(',')},
+            				success:function(ret){
+            					if(!ret.success){
+            						$.show_warning("提示",ret.msg);
+            					}				
+            				}
+            			});
+            		}
+            	});
+            }*/
+        });
+        var dg = $("#ui_mymarking_dg").datagrid({       //初始化datagrid
+            url: "markingServlet.do?action=search",
+            rownumbers: false,            		
+            striped: true, pagination: true, pageSize: 20,singleSelect:true,
+            idField: 'paperId',
+            sortName: 'paperId',
+            sortOrder: 'desc',
+            pageList: [20, 40, 60, 80, 100],            
+            queryParams:{where:'(markingTime is null)'},
+            onEndEdit: onEndEdit,
+            columns: [[
+				{ field: 'questionTitle', title: '题目', sortable: true,width: 200 ,
+                    formatter: function (value, row, index) {   
+                    	var div='<div style="height:200px">'+value+'</div>';
+                    	return div;
+                        //return value && value.length > 15 ? '<span title="' + value + '">' + value + '</span>' : value;
+                    }
+				},
+				{ field: 'answer', title: '考生答案', width: 200,
+                    formatter: function (value, row, index) {                    	
+                        return value && value.length > 15 ? '<span title="' + value + '">' + value + '</span>' : value;
+                    }
+                },  
+                { field: 'rightAnswer', title: '参考答案', width: 200,
+                    formatter: function (value, row, index) {                    	
+                        return value && value.length > 15 ? '<span title="' + value + '">' + value + '</span>' : value;
+                    }
+                },  
+                { field: 'refscore', title: '试题分值',   width: 60 },                                       
+          		{ field: 'score', title: '考生得分', width: 80, editor:{type:'numberbox',options:{precision:1}} },
+          		{ field: 'teacherName', title: '评阅教师', sortable: true, width: 80 },
+          		{ field: 'markingTime', title: '评阅时间', sortable: true, width: 150 },
+          		{ field: 'planName', title: '计划名称', sortable: true, width: 150 }
+          		
+            ]],
+            view: cardview,
+            toolbar: '#ui_mymarking_tb'
+            
+        });       
+        dg.datagrid('enableCellEditing').datagrid('gotoCell', {
+            index: 0,
+            field: 'paperId'
+        });               
+    }
+    function endEditing(){
+        if (editIndex == undefined){return true}
+        if ($('#ui_mymarking_dg').datagrid('validateRow', editIndex)){ 
+        	var refscore = $('#ui_mymarking_dg').datagrid('getRows')[editIndex]['refscore']; 
+        	var score = $('#ui_mymarking_dg').datagrid('getRows')[editIndex]['score']; 
+        	if(score>refscore){
+                $('#ui_mymarking_dg').datagrid('endEdit', editIndex);
+                editIndex = undefined;
+                return true;
+        	}
+            
+        } else {
+            return false;
+        }
+    }
+	
+    function onEndEdit(index, row){
+        var ed = $(this).datagrid('getEditor', {
+            index: index,
+            field: 'paperId'
+        });
+        
+        var refscore = row.refscore; 
+    	var score = row.score; 
+    	if(score > refscore){
+    		row.score = refscore;
+    	}
+    	else if(score<0) row.score=0;
+    	var data = [];
+    	data.push(row.paperId + "\t" + row.score)
+    	$.ajax({
+			url:'markingServlet.do',
+			type:'POST',
+			dataType:'json',
+			data:{action:'saveMark',data:data.join(',')},
+			success:function(ret){
+				if(!ret.success){
+					$.show_warning("提示",data.msg);
+				}				
+			}
+		});
+    }
+    
+    function ui_mymarking_saveMark(){
+    	if (endEditing()) {
+    		var updateds = $("#ui_mymarking_dg").datagrid('getChanges', "updated");
+    		if(updateds.length < 1) {
+    			$.show_warning("提示","没有成绩变化，不需要保存！");
+    			return;
+    		}
+    		alert(updateds.length);
+    		var data = [];
+    		if(updateds && updateds.length>0){
+	    		for(var i=0;i<updateds.length;i++){
+	    			var updated=updateds[i];
+	    			data.push(updated.paperId + "\t" + updated.score)
+	    		}
+    		}
+    		$.ajax({
+    			url:'markingServlet.do',
+    			type:'POST',
+    			dataType:'json',
+    			data:{action:'saveMark',data:data.join(',')},
+    			success:function(ret){
+    				$("#ui_mymarking_dg").datagrid("reload").datagrid('clearSelections').datagrid('clearChecked');                    
+    				$.show_warning("提示",data.msg);
+    			}
+    		});
+    		
+    	}
+    }
+    
+    function ui_mymarking_searchdata() {
+        var whereStr = "1=1";
+            
+        var planId = $('#ui_mymarking_plan_search').combobox('getValue');
+        var status = $('#ui_mymarking_status_search').combobox('getValue');
+           
+        if (planId  && planId>0) {
+            whereStr += " and planId=" + planId + "";
+        }
+        if (status == "0") {
+            whereStr += " and MarkingTime is null ";
+        }else if (status == "1") {
+            whereStr += " and  MarkingTime is not null ";
+        }
+        whereStr = "("+whereStr+")";
+        
+        $("#ui_mymarking_dg").datagrid('load', {where:whereStr});
+        $("#ui_mymarking_dg").datagrid('clearSelections').datagrid('clearChecked');        
+    }
+    function ui_mymarking_cleardata() {
+        
+        $('#ui_mymarking_plan_search').combobox('clear');
+        $('#ui_mymarking_status_search').combobox('clear');
+        $("#ui_mymarking_dg").datagrid('load', {});
+
+        $("#ui_mymarking_dg").datagrid('clearSelections').datagrid('clearChecked');        
+    }
+        
+</script>
+<div id="ui_mymarking_layout" class="easyui-layout" data-options="fit:true,border:false">
+    <div data-options="region:'center',border:false">
+        <table id="ui_mymarking_dg" data-options="fit:true,border:false">
+        </table>
+        <div id="ui_mymarking_tb">
+				<table>
+					<tr>						
+						<th>考试计划:</th>
+						<td><input class="easyui-combobox"
+							id="ui_mymarking_plan_search" name="strategyId"
+							data-options="url:'planServlet.do?action=listMarkingTeacher',valueField:'id',textField:'name',editable:false,required:true,panelHeight:'200'" />
+							<img style="cursor: pointer; vertical-align: middle;"
+							onclick="$('#ui_mymarking_plan_search').combobox('clear');"
+							alt="清空部门" title="清空角色" src="easyui/themes/icons/edit-clear.png" /></td>
+						<th>评阅状态:</th>
+						<td><select id="ui_mymarking_status_search"
+							class="easyui-combobox"
+							data-options="editable:false,required:true,panelHeight:'auto'">
+								<option value="0">未评阅</option>
+								<option value="1">已评阅</option>
+								<option value="2">全部</option>
+						</select></td>
+						<td><a href="javascript:void(0);" class="easyui-linkbutton"
+							iconcls="icon-search" plain="true"
+							onclick="ui_mymarking_searchdata();">搜索</a></td>
+					</tr>
+				</table>
+        </div>
+    </div>
+        
+</div>

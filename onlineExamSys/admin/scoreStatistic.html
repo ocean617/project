@@ -1,0 +1,39 @@
+<style>
+	#ui_score_stat_dlg input[type=text]{
+		border:none;
+		color:blue;
+		width:40px;
+	}
+</style>
+<div id="ui_score_stat_dlg" style="padding:5px">
+		<div id="ui_score_stat_hitting" style="padding:10px">正在统计，请稍候...</div>
+		<form id="ui_score_stat_editform" method="post">
+		<table class="tableForm" id="ui_score_stat_table" style="width:100%">
+			<tr>
+				<th>平均分</th>
+				<td colspan="3"><input type="text"  readonly name="avgscore"/></td>
+			</tr>
+			<tr>
+				<th>最高分</th>
+				<td><input type="text"  readonly name="maxscore"/></td>
+			
+				<th>最低分</th>
+				<td><input type="text"  readonly name="minscore"/></td>
+			</tr>
+			<tr>
+				<th>缺考人数</th>
+				<td><input type="text"  readonly name="missCount"/></td>
+			
+				<th>实考人数</th>
+				<td><input type="text"  readonly name="joinCount"/></td>
+			</tr>
+			<tr>
+				<th>应考试人数</th>
+				<td><input type="text"  readonly name="behooveCount"/></td>
+			
+				<th>及格人数</th>
+				<td><input type="text"  readonly name="passCount"/></td>
+			</tr>
+		</table>
+		</form>
+</div>

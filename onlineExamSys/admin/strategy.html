@@ -1,0 +1,485 @@
+<script type="text/javascript">	
+	var currentStrategy;
+    $(function () {
+    	currentStrategy = null;
+    	ui_strategy_init_list();
+        //回车搜索
+        /*
+        $("#ui_strategy_search").find('input').on('keyup', function (event) {
+            if (event.keyCode == '13') {
+                ui_strategy_searchdata();
+            }
+        })*/
+    });
+
+    function ui_strategy_init_list(toolbar) {
+        $("#ui_strategy_dg").datagrid({       //初始化datagrid
+            url: "strategyServlet.do?action=search",
+            striped: true, rownumbers: true, pagination: true, pageSize: 20,singleSelect:true,
+            idField: 'id',
+            sortName: 'createtime',
+            sortOrder: 'desc',
+            pageList: [20, 40, 60, 80, 100],
+            frozenColumns: [[
+                             { field: 'ck', checkbox: true }
+                             ]],
+            columns: [[
+					   { field: 'name',  title: '名称',width: 250,  
+                           formatter: function (value, row, index) {
+                        	   return value && value.length > 10 ? '<span title="' + value + '">' + value + '</span>' : value;
+                           }
+					   },
+					   { field: 'courseName',  title: '所属课程',width: 150, sortable: true },
+                       { field: 'totalScore', title: '总分', width: 40   },
+                       { field: 'passScore', title: '及格', width: 40},
+                       { field: 'strategystatus', title: '状态', width: 40, sortable: true,
+                           formatter: function (value, row, index) {
+                               return value=="1" ? "有效":"无效";
+                           }
+                       },
+                       { field: 'teacherName', title: '创建人', sortable: true, width: 80 },
+                       { field: 'createtime', title: '创建时间', sortable: true, width: 150}
+            	]],           
+            toolbar: [{
+                text: '添加',
+                iconCls: 'icon-add',
+                handler: function () { ui_strategy_add(); }
+            }, {
+                text: '修改',
+                iconCls: 'icon-edit',
+                handler: function () { ui_strategy_edit(); }
+            }, {
+                text: '删除',
+                iconCls: 'icon-remove',
+                handler: function () { ui_strategy_delete() }            
+            },'-',{
+                text: '分享考试策略',
+                iconCls: 'icon-authorize',
+                handler: function () { ui_strategy_add_members() }            
+            },{
+                text: '取消分享',
+                iconCls: 'icon-delete',
+                handler: function () { ui_strategy_remove_members() }            
+            }],
+
+            onSelect: function (rowIndex, rowData) {
+                if (currentStrategy && currentStrategy.id == rowData.id) {  //点选的是相同的角色就不再请求数据
+                    return;
+                }
+                currentStrategy = rowData;   //赋值
+
+                var $ui_role_layout = $("#ui_strategy_layout");
+                var eastRoleUser = $ui_role_layout.layout("panel", "east");
+
+                if (eastRoleUser.panel("options").collapsed) {   //判断是否展开
+                    $ui_role_layout.layout("expand", "east");
+                }
+                eastRoleUser.panel("setTitle","【"+ rowData.name + "】组卷策略明细");
+                if ($("#ui_strategy_detail_dg").data("datagrid")) {
+                    $("#ui_strategy_detail_dg").datagrid({       //请求数据
+                        url: "strategyDetailServlet.do?action=list&strategyId=" + currentStrategy.id
+                    });
+                }
+                else {
+                    $("#ui_strategy_detail_dg").datagrid({       //初始化datagrid
+                        url: "strategyDetailServlet.do?action=list&strategyId=" + currentStrategy.id,
+                        striped: true,
+                        rownumbers: true,
+                        showFooter: true,
+                        idField: 'id',
+                        sortName: 'id',
+                        sortOrder: 'asc',
+                        frozenColumns: [[
+                                         { field: 'ck', checkbox: true }
+                                         ]],
+                        columns: [[
+                              { field: 'questionTypeName', title: '试题类型',   width: 100,
+                                  formatter: function (value, row, index) {
+                                      return value && value.length > 10 ? '<span title="' + value + '">' + value + '</span>' : value;
+                                  } },
+                              { field: 'unitName', title: '所属单元',   width: 120 },
+                              { field: 'difficulty', title: '难度',   width: 80 },
+                              { field: 'quantity', title: '数量', width: 80 },                              
+                              { field: 'score', title: '分值',  width: 80 }
+                          ]],
+                          rowStyler: function (index, row) {
+                              if (!row.questionTypeName) {
+                                  return 'background-color:#66ccff;color:#fff;font-weight:bold;';
+                              }
+                          },
+                         toolbar: [{
+                                  text: '添加',
+                                  iconCls: 'icon-add',
+                                  handler: function () { ui_strategy_detail_add(); }
+                              }, {
+                                  text: '修改',
+                                  iconCls: 'icon-edit',
+                                  handler: function () { ui_strategy_detail_edit(); }
+                              }, {
+                                  text: '删除',
+                                  iconCls: 'icon-remove',
+                                  handler: function () { ui_strategy_detail_delete(); }            
+                              }],
+                    });
+                }
+            }
+        });
+    }
+    //取消分享
+    function ui_strategy_remove_members(){
+    	var rows = $("#ui_strategy_dg").datagrid("getChecked");
+        if (rows.length < 1) {
+            $.show_warning("提示", "请先勾选要取消分享的考试策略！");
+            return;
+        }
+        if (rows.length > 1) {
+            $.show_warning("提示", "不支持同时取消多个考试策略的分享！");
+            $("#ui_strategy_dg").datagrid('clearSelections').datagrid('clearChecked');
+            return;
+        }
+        var row = rows[0];
+        //初始化dialog
+        $("<div/>").dialog({
+            id: "ui_strategy_removeTeachers_dialog",
+            href: "strategyRemoveTeachers.html",
+            title: "取消分享：【"+row.name+"】",
+            iconCls:"icon-delete",
+            height: 300,
+            width: 360,
+            modal: true,
+            buttons: [{
+                id: "ui_strategy_removeTeachers_btn",
+                text: '取消分享',
+                iconCls: "icon-cancel",
+                handler: function () {
+                	
+                    var teachers = $('#ui_strategy_remove_teacher_dg').datagrid('getChecked');
+                    var ids = [];
+                    for (var i = 0; i < teachers.length; i++) {
+                    	ids.push(teachers[i].id);    	//教师ID            
+                    }
+                   
+                    $('#ui_strategy_removeTeachers_btn').linkbutton('disable');
+                    
+                    var para = {};
+                    para.action = "removeTeachers";
+                    para.timespan = new Date().getTime();
+                    para.ids = ids.join(',');                   
+                    $.ajax({
+                        url: 'strategyServlet.do',
+                        data: para,
+                        type: "POST",
+                        dataType: "json",
+                        success: function (data) {
+                            if (data.success) {
+                            	$.show_warning("提示", data.msg);
+                            	$("#ui_strategy_removeTeachers_dialog").dialog('close');  //销毁dialog对象
+                                
+                            } else {
+                                $('#ui_strategy_removeTeachers_btn').linkbutton('enable');
+                                $.show_warning("提示", data.msg);
+                            }
+                        }
+                    });
+                }
+            }],
+            onLoad: function () {
+            	ui_strategy_remove_teacher_init_list(row.id);
+            },
+            onClose: function () {
+                $("#ui_strategy_removeTeachers_dialog").dialog('destroy');  //销毁dialog对象
+            }
+        });
+    }
+    //将考试策略分享给其他教师，允许其访问该策略
+    function ui_strategy_add_members(){
+    	var rows = $("#ui_strategy_dg").datagrid("getChecked");
+        if (rows.length < 1) {
+            $.show_warning("提示", "请先勾选要分享的考试策略！");
+            return;
+        }
+        if (rows.length > 1) {
+            $.show_warning("提示", "不支持同时分享多个考试策略！");
+            $("#ui_strategy_dg").datagrid('clearSelections').datagrid('clearChecked');
+            return;
+        }
+        var row = rows[0];
+        //初始化dialog
+        $("<div/>").dialog({
+            id: "ui_strategy_setTeachers_dialog",
+            href: "strategySetTeachers.html",
+            title: "选择要分享的教师：【"+row.name+"】",
+            iconCls:"icon-assign",
+            height: 400,
+            width: 700,
+            modal: true,
+            buttons: [{
+                id: "ui_strategy_setTeachers_btn",
+                text: '分享',
+                iconCls: "icon-ok",
+                handler: function () {
+                	
+                	var strategyId = row.id;
+                	
+                    var teachers = $('#ui_strategy_teacher_dg').datagrid('getChecked');
+                    var teacherIds = [];
+                    for (var i = 0; i < teachers.length; i++) {
+                    	teacherIds.push(teachers[i].id);    	//教师ID            
+                    }
+                   
+                    $('#ui_strategy_setTeachers_btn').linkbutton('disable');
+                    
+                    var para = {};
+                    para.action = "setTeachers";
+                    para.timespan = new Date().getTime();
+                    para.teacherIds = teacherIds.join(',');
+                    para.strategyId = strategyId;
+					
+                    $.ajax({
+                        url: 'strategyServlet.do',
+                        data: para,
+                        type: "POST",
+                        dataType: "json",
+                        success: function (data) {
+                            if (data.success) {
+                            	$.show_warning("提示", data.msg);
+                            	$("#ui_strategy_setTeachers_dialog").dialog('close');  //销毁dialog对象
+                                
+                            } else {
+                                $('#ui_strategy_setTeachers_btn').linkbutton('enable');
+                                $.show_warning("提示", data.msg);
+                            }
+                        }
+                    });
+                }
+            }],
+            onLoad: function () {
+            	
+            },
+            onClose: function () {
+                $("#ui_strategy_setTeachers_dialog").dialog('destroy');  //销毁dialog对象
+            }
+        });
+    }
+
+    function ui_strategy_detail_add(){
+    	ui_dg_add_edit('添加策略明细','ui_strategy_detail','strategyDetailServlet.do','strategyDetail.html','add',600,300,
+    			null,
+    		function(){//fnLoad
+    			ui_strategy_detail_add_edit_init();    
+    		},
+    		function(){ //fnValidate
+				var cnt = $('#ui_strategy_detail_quantity_edit').numberbox("getValue");
+				var total = $('#hidden_strategy_detail_quantity').val();
+				cnt = parseInt(cnt);
+				total = parseInt(total);
+				if(cnt>0 && cnt<=total) return true;
+				else{
+					$.show_alert("提示", "试题数量必须大于0且小于等于【"+total+"】");
+					return false;
+				}
+			});
+    }
+    
+    //行政策略明细录入或编辑界面加载后初始化界面
+    function ui_strategy_detail_add_edit_init(){
+    	$('#ui_strategy_detail_strategyid_edit').val(currentStrategy.id); 	    		
+		$('#ui_strategy_detail_name_edit').textbox("setValue",currentStrategy.name);
+		$('#ui_strategy_detail_coursename_edit').textbox("setValue",currentStrategy.courseName);
+		   		
+		$('#ui_strategy_detail_courseunit_edit').combotree( {
+			url : 'courseUnitServlet.do?action=list&courseId='+currentStrategy.courseId,
+			method : 'get',					
+			lines:true,	
+			panelHeight : '200',
+			editable : false,
+			icons : [ {
+				iconCls : 'icon-tip'
+			} ],
+			formatter : function(r) {
+				var s = '<span style="font-weight:bold">' + r.text
+						+ '</span><br/>';
+				return s;
+			},
+			onSelect : function(r) {	
+				getQuestionQuantity(r.id,null);	
+			}
+		});
+                    
+        $('#ui_strategy_detail_questiontype_edit').combobox( {
+			url : 'questionServlet.do?action=listQuestionType&strategyId='+currentStrategy.id,
+			method : 'get',									
+			editable: false,
+        	valueField:'typeId', 
+        	textField:'typeName', 
+        	multiple:false,
+        	panelHeight:'200',
+        	required:true,
+			icons : [ {
+				iconCls : 'icon-tip'
+			} ],
+			formatter : function(r) {
+				var s = '<span style="font-weight:bold">' + r.typeName + '</span><br/>';
+				return s;
+			},
+			onSelect : function(r) {	
+				getQuestionQuantity(null,r.typeId);
+			}
+		});    
+    }
+    
+    function ui_strategy_detail_edit(courseId){
+    	var rows = $("#ui_strategy_detail_dg").datagrid("getChecked");
+        if (rows.length < 1) {
+            $.show_warning("提示", "请先勾选要修改的组卷策略明细");
+            return;
+        }
+        if (rows.length > 1) {
+            $.show_warning("提示", "不支持批量修改");
+            $("#ui_strategy_detail_dg").datagrid('clearSelections').datagrid('clearChecked');
+            return;
+        }
+        var row = rows[0];
+        if(row.unitId==0) row.unitId=null;
+    	ui_dg_add_edit('修改策略明细','ui_strategy_detail','strategyDetailServlet.do','strategyDetail.html','edit',600,300,
+    			null,
+        		function(){//fnLoad
+    				ui_strategy_detail_add_edit_init();
+    	            $('#ui_strategy_detail_editform').form('load',row);
+        		},
+        		function(){ //fnValidate
+    				var cnt = $('#ui_strategy_detail_quantity_edit').numberbox("getValue");
+    				var total = $('#hidden_strategy_detail_quantity').val();
+    				cnt = parseInt(cnt);
+    				total = parseInt(total);
+    				if(cnt>0 && cnt<=total) return true;
+    				else{
+    					$.show_alert("提示", "试题数量必须大于0且小于等于【"+total+"】");
+    					return false;
+    				}
+    			});
+    }
+    function ui_strategy_detail_delete(){
+    	ui_dg_delete('策略明细','ui_strategy_detail','strategyDetailServlet.do');
+    }
+    //添加用户
+    function ui_strategy_add() {
+    	ui_dg_add_edit('添加组卷策略','ui_strategy','strategyServlet.do','strategyEdit.html','add',460,240,
+    			null,function(){
+    		$('#ui_strategy_course_edit').combobox( {
+    			url : 'courseServlet.do?action=list',
+    			method : 'get',
+    			valueField : 'id',
+    			textField : 'name',
+    			panelHeight : '200',
+    			editable : false,
+    			required:true,
+    			icons : [ {
+    				iconCls : 'icon-tip'
+    			} ],
+    			/*
+    			formatter : function(row) {
+    				var s = '<span style="font-weight:bold">' + row.name
+    						+ '</span><br/>';
+    				return s;
+    			},*/
+    			onSelect : function(row) {
+    				$('#ui_strategy_name_edit').textbox("setValue",row.name+"_组卷策略");
+    			}
+    		});
+    		
+    	});        
+    }
+    //修改用户
+    function ui_strategy_edit() {
+        var rows = $("#ui_strategy_dg").datagrid("getChecked");
+        if (rows.length < 1) {
+            $.show_warning("提示", "请先勾选要修改的组卷策略");
+            return;
+        }
+        if (rows.length > 1) {
+            $.show_warning("提示", "不支持批量修改");
+            $("#ui_strategy_dg").datagrid('clearSelections').datagrid('clearChecked');
+            return;
+        }
+        var row = rows[0];
+        ui_dg_add_edit('修改组卷策略','ui_strategy','strategyServlet.do','strategyEdit.html','edit',460,240,
+        		null,function(){
+        	$('#ui_strategy_course_edit').combobox( {
+    			url : 'courseServlet.do?action=list',
+    			method : 'get',
+    			valueField : 'id',
+    			textField : 'name',
+    			panelHeight : '200',
+    			editable : false,
+    			required:true,
+    			icons : [ {
+    				iconCls : 'icon-tip'
+    			} ]
+    			/*,
+    			formatter : function(row) {
+    				var s = '<span style="font-weight:bold">' + row.name
+    						+ '</span><br/>';
+    				return s;
+    			},
+    			onSelect : function(r) {
+    				if(row.id)
+    				$('#ui_strategy_name_edit').textbox("setValue",r.name+"_组卷策略");
+    			}*/
+    		});
+        	$("#ui_strategy_editform").form("load",row);
+        });          
+    }
+    //删除用户（可批量）
+    function ui_strategy_delete() {
+    	ui_dg_delete('组卷策略','ui_strategy','strategyServlet.do',function(){    		
+          	//如果“策略明细”标签页处于打开状态需要刷新，否则被删除的策略还显示
+            if ($('#tabs').tabs('exists', '策略明细')) {
+                $('#tabs').tabs('getTab', '策略明细').panel('refresh');
+            }
+            $("#ui_strategy_layout").layout("collapse", "east");    		
+    	});        
+    }       
+    
+    function getQuestionQuantity(unitId,typeId,difficulty){
+    	if(!unitId)
+    		unitId = $('#ui_strategy_detail_courseunit_edit').combobox("getValue");
+    	if(!typeId)
+    		typeId = $('#ui_strategy_detail_questiontype_edit').combobox("getValue");
+    	if(!difficulty)
+    		difficulty = $('#ui_strategy_detail_difficulty_edit').slider("getValue");
+    	var para = {};
+        para.action = "getQuestionQty";
+        para.timespan = new Date().getTime();
+		para.courseId = currentStrategy.courseId;
+		para.courseunitId = unitId;
+		para.questionTypeId = typeId;
+		para.difficulty = difficulty;
+        $.ajax({
+            url: 'questionServlet.do',
+            data: para,
+            type: "POST",
+            dataType: "json",
+            success: function (data) {
+                if (data.success) {
+                    $('#span_strategy_detail_quantity').text("【"+data.msg+"】");
+                    $('#hidden_strategy_detail_quantity').val(data.msg);
+                } else {
+                    //$.show_warning("提示", data.msg);
+                	$('#hidden_strategy_detail_quantity').val(data.msg);
+                }
+            }
+        });
+    }
+</script>
+<div id="ui_strategy_layout" class="easyui-layout" data-options="fit:true,border:false">    
+    <div data-options="region:'center',border:false">
+        <table id="ui_strategy_dg" data-options="fit:true,border:false">
+        </table>
+    </div>
+    <div data-options="region:'east',split:true,border:true,collapsed:true" title="策略明细"
+        style="width: 480px;">
+        <table id="ui_strategy_detail_dg" data-options="fit:true,border:false">
+        </table>
+    </div>
+</div>

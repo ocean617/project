@@ -1,0 +1,57 @@
+<div style="padding: 1px; overflow: hidden">
+    <form id="ui_strategy_detail_editform" method="post">
+        <table class="tableForm" style="width: 100%">
+        	<tr>
+                <th>当前组卷策略名称：
+                </th>
+                <td colspan="3">
+                    <input type="hidden" name="id" id="ui_strategy_detail_id_edit" />
+                    <input type="hidden" name="strategyId" id="ui_strategy_detail_strategyid_edit" />
+                    <input type="text" disabled="disabled" name="name" id="ui_strategy_detail_name_edit" class="easyui-textbox" style="width:80%" />
+                </td>
+            </tr>
+            <tr>
+            	<th>课程名称：
+                </th>
+                <td>
+                    <input type="text" disabled="disabled" name="coursename" id="ui_strategy_detail_coursename_edit" class="easyui-textbox"  />
+                </td>
+                <th>课程单元：
+                </th>
+                <td>
+                   <input id="ui_strategy_detail_courseunit_edit" name="unitId" />
+                    <img style="cursor: pointer; vertical-align: middle;" onclick="$('#ui_strategy_detail_courseunit_edit').combotree('clear');"
+                        alt="清空课程单元" title="清空" src="easyui/themes/icons/edit-clear.png" />
+                </td>
+            </tr>
+            <tr>
+                <th>试题类型：
+                </th>
+                <td>
+                   <input id="ui_strategy_detail_questiontype_edit" name="questionType" />
+                </td>
+                <th>难易度：</th>
+                <td style="height:60px"><input id="ui_strategy_detail_difficulty_edit" name="difficulty"
+						class="easyui-slider"  style="width:80%"
+						data-options="min:1,max:3,showTip:false,value:2, rule: [1,2,3],onChange:function(v){getQuestionQuantity(null,null,v);} " /></td>
+            </tr>
+            
+            <tr>
+                <th>试题分值：
+                </th>
+                <td>
+                    <input type="text" name="score" style="width:30%" value="2" id="ui_strategy_detail_score_edit" class="easyui-numberbox" data-options="required:true,precision:0" />
+                </td>
+                <th>试题数量：
+                </th>
+                <td>
+                	<input id="hidden_strategy_detail_quantity" value="0" type="hidden"/>
+                    <input type="text" name="quantity" style="width:30%" value="0" id="ui_strategy_detail_quantity_edit" class="easyui-numberbox" data-options="required:true,precision:0" />
+                    <span id="span_strategy_detail_quantity" style="color:blue">[0]</span>
+                    <img style="cursor: pointer; vertical-align: middle;" onclick="getQuestionQuantity()"
+                        alt="刷新试题数量" title="刷新试题数量" src="easyui/themes/icons/refresh.png" />
+                </td>
+            </tr>                                   
+        </table>
+    </form>
+</div>

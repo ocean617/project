@@ -1,0 +1,226 @@
+<script>
+	var currentIndex = 0;	
+	var currentType = 1;	
+	function ui_question_saveCurrent(){		
+		$('#ft a').linkbutton({iconCls:'icon-search'});
+		ui_question_saveCurrent2();
+	}
+	function ui_question_saveCurrent2(){
+		if(currentIndex==0){
+			var content = UE.getEditor('ui_exam_editor').getContent();
+			$('#hiddenQuestion').val(content);
+		}else if(currentIndex==-1){
+			var content = UE.getEditor('ui_exam_editor').getContent();
+			$('#hiddenExplain').val(content);
+		}else if(currentIndex==-2){
+			var content = UE.getEditor('ui_exam_editor').getContent();
+			$('#hiddenAnswer').val(content);
+		}else{
+			var content = UE.getEditor('ui_exam_editor').getContent();
+			$('#hiddenOption'+currentIndex).val(content);			
+		}		
+	}
+	function ui_question_question(){
+		ui_question_saveCurrent();
+		currentIndex = 0;
+		var question = $('#hiddenQuestion').val();
+		UE.getEditor('ui_exam_editor').setContent(question, false);
+		$('#btn_question_question').linkbutton({iconCls:'icon-edit'});
+		UE.getEditor('ui_exam_editor').focus();
+	}
+	function ui_question_answer(){
+		ui_question_saveCurrent();
+		currentIndex = -2;
+		var question = $('#hiddenAnswer').val();
+		UE.getEditor('ui_exam_editor').setContent(question, false);
+		$('#btn_question_answer').linkbutton({iconCls:'icon-edit'});
+		UE.getEditor('ui_exam_editor').focus();
+	}
+	function ui_question_option(index){
+		ui_question_saveCurrent();
+		currentIndex = index;
+		var option = $('#hiddenOption'+index).val();
+		UE.getEditor('ui_exam_editor').setContent(option, false);
+		$('#btn_question_option'+index).linkbutton({iconCls:'icon-edit'});
+		UE.getEditor('ui_exam_editor').focus();
+	}
+	function ui_question_explain(){
+		ui_question_saveCurrent();
+		currentIndex = -1;
+		var option = $('#hiddenExplain').val();
+		UE.getEditor('ui_exam_editor').setContent(option, false);
+		$('#btn_question_explain').linkbutton({iconCls:'icon-edit'});
+		UE.getEditor('ui_exam_editor').focus();
+	}
+	//添加一个选择项
+	function ui_question_option_add(){
+		
+		if(currentType<=2){
+			var cnt = $('[name=hiddenOption]').length;
+			cnt++;
+			var str="A";
+			var code = str.charCodeAt();
+			var n = String.fromCharCode(code+cnt-1);
+			var opt = "选项"+ n;
+			var btn = '<a href="javascript:void(0);" id="btn_question_option'+cnt+'" name="btn_question_option" onclick="ui_question_option('+cnt+')">'+opt+'</a>';
+			var hdn = '<input type="hidden" name="hiddenOption" value="" id="hiddenOption'+cnt+'" />'
+			$('#btn_question_explain').before(btn);
+			$('#btn_question_explain').before(hdn);
+			$('#btn_question_option'+cnt).linkbutton({
+				iconCls:'icon-search'
+			});				
+			//增加答案选项
+			var answer='<span id="span_question_answer'+cnt+'"><input type="radio" value="'+cnt+'" name="ui_question_answer" id="ui_question_answer'+cnt+'"/>'+n+'</span>';
+			if(currentType==2){ //单选
+				answer='<span id="span_question_answer'+cnt+'"><input type="checkbox" value="'+cnt+'" name="ui_question_answer" id="ui_question_answer'+cnt+'"/>'+n+'</span>';				
+			}
+			$('#ui_question_answer_div').append(answer);
+			$('#ui_question_answer_box').show();
+		}else if(currentType==3){	//判断			
+			$('#ui_question_answer_div').empty();
+			var answer='<span id="span_question_answer1"><input type="radio" value="2" name="ui_question_answer" id="ui_question_answer1"/>错误 </span>';
+			$('#ui_question_answer_div').append(answer);
+			    answer='<span id="span_question_answer2"><input type="radio" value="1" name="ui_question_answer" id="ui_question_answer2"/>正确</span>';			
+			$('#ui_question_answer_div').append(answer);
+			$('#ui_question_answer_box').show();
+		}else{	//其他题型
+			var btn = '<a href="javascript:void(0);" id="btn_question_answer" name="btn_question_answer" onclick="ui_question_answer()">答案</a>';
+			var hdn = '<input type="hidden" name="hiddenAnswer" value="" id="hiddenAnswer" />'
+			$('#ui_question_answer_box').hide();
+			$('#btn_question_explain').before(btn);
+			$('#btn_question_explain').before(hdn);
+			$('#btn_question_answer').linkbutton({
+				iconCls:'icon-search'
+			});		
+		}
+	}
+	
+	function ui_question_option_delete(){			
+		var i = $('[name=hiddenOption]').length;	
+		$('#btn_question_option'+i).remove();
+		$('#hiddenOption'+i).remove();
+		$('#span_question_answer'+i).remove();
+	}
+	//初始化选项
+	function ui_question_option_init(questionType, question){		
+			
+		if(currentType!=questionType || question){					
+			if(currentType>=3){
+				$('#hiddenAnswer').remove();
+				$('#btn_question_answer').remove();
+			}
+			currentType=questionType;
+			$('#ui_question_answer_div').empty();
+			$('[name=btn_question_option]').remove();
+			$('[name=hiddenOption]').remove();
+				
+			if(questionType == 1 || questionType == 2 ){	//单、多选择题
+				$('#btn_question_option_add').show();
+				$('#btn_question_option_delete').show();
+				var cnt = 4;
+				if(question) cnt = question.list.length;
+				for(var i=1;i<=cnt;i++){
+					ui_question_option_add();
+				}
+			}else if(questionType==3){ //判断题
+				$('#btn_question_option_add').hide();
+				$('#btn_question_option_delete').hide();
+				ui_question_option_add();
+				
+			}else{			
+				$('#btn_question_option_add').hide();
+				$('#btn_question_option_delete').hide();
+				ui_question_option_add();
+			}
+		}
+		//填充初值
+		if(!question) return ;
+		$('#btn_question_option_add').hide();
+		$('#btn_question_option_delete').hide();
+		if(questionType<=2){	//选择题
+			
+			var options = question.list;
+			
+			for(var i=1;i<=options.length;i++){
+				var option = options[i-1];
+				$('#hiddenOption'+i).val(option.name);
+				$('#hiddenOption'+i).attr("oid",option.id);
+				if(option.isRight==1){
+					
+					$("#ui_question_answer"+i).prop("checked",true);	
+					//$("#ui_question_answer"+i).attr("checked",true);
+				}
+			}
+		}else if(questionType==3){
+			if(question.answer==1){		//正确
+				$("#ui_question_answer2").prop("checked",true);
+				//$("#ui_question_answer2").attr("checked",true);
+			}else if(question.answer==2){	//错误
+				$("#ui_question_answer1").prop("checked",true);
+				//$("#ui_question_answer1").attr("checked",true);
+			}
+		}else{			
+			$('#hiddenAnswer').val(question.answer);
+		} 
+		return;	
+	}
+	
+	function ui_question_resetEditor(){
+		UE.getEditor('ui_exam_editor').setContent("", false);
+		$('#ui_question_customer_editor [type=hidden]').val("");
+		$('#ui_question_customer_editor [name=hiddenOption]').removeAttr("oid");
+		//$('#ui_question_customer_editor [name=ui_question_answer]').val("");
+		$('#ui_question_customer_editor [name=ui_question_answer]').removeAttr("checked");
+		$('#hiddenAnswer').val("");		
+		currentIndex = 0;	
+		$('#btn_question_question').linkbutton({iconCls:'icon-edit'});
+	}
+</script>
+<div style="padding:20px">
+<form id="ui_question_fm">
+	<input id="ui_question_pid" type="hidden" name="pid"  />
+	<div id="ui_question_ptitle" style="height:50px;border: solid gray 1px;overflow:auto;margin-bottom:5px"></div>
+	<table style="width:100%">
+		<tr><td>课程:</td><td><input id="ui_question_course" name="courseId"  /></td>
+			<td>单元:</td><td><input id="ui_question_course_unit" class="easyui-combotree" name="courseunitId" /></td>
+			<td>试题类型:</td><td><input id="ui_question_questionType" name="questionType" /></td>	
+				
+			<td>难易度:</td><td><input id="ui_question_difficulty" name="difficulty"
+						class="easyui-slider"  style="width:100px"
+						data-options="min:1,max:3,showTip:false,value:2, rule: [1,2,3] " /></td>
+			
+		</tr>	
+		<tr><td colspan="8" style="height:20px"></td></tr>	
+	</table>
+	<div id="ui_exam_editor"></div>
+	<div id="ui_question_customer_editor">
+		<div>
+			<input type="hidden" value="" id="hiddenQuestionId"/>
+			<input type="hidden" value="" id="hiddenQuestion"/>
+			<input type="hidden" value="" id="hiddenExplain"/>
+			<input type="hidden" name="hiddenOption" value="" id="hiddenOption1"/>
+			<input type="hidden" name="hiddenOption" value="" id="hiddenOption2"/>
+			<input type="hidden" name="hiddenOption" value="" id="hiddenOption3"/>
+			<input type="hidden" name="hiddenOption" value="" id="hiddenOption4"/>
+		</div>
+		<div id="ft" style="margin-bottom:10px">
+			<a href="javascript:void(0);" id="btn_question_question" class="easyui-linkbutton" data-options="iconCls:'icon-search'" onclick="ui_question_question()" >题干</a>
+			<a href="javascript:void(0);" name="btn_question_option" id="btn_question_option1"  class="easyui-linkbutton" data-options="iconCls:'icon-search'" onclick="ui_question_option(1)">选项A</a>
+			<a href="javascript:void(0);" name="btn_question_option" id="btn_question_option2"  class="easyui-linkbutton" data-options="iconCls:'icon-search'" onclick="ui_question_option(2)">选项B</a>
+			<a href="javascript:void(0);" name="btn_question_option" id="btn_question_option3"  class="easyui-linkbutton" data-options="iconCls:'icon-search'" onclick="ui_question_option(3)">选项C</a>
+			<a href="javascript:void(0);" name="btn_question_option" id="btn_question_option4"  class="easyui-linkbutton" data-options="iconCls:'icon-search'" onclick="ui_question_option(4)">选项D</a>
+			<a href="javascript:void(0);" id="btn_question_explain"  class="easyui-linkbutton" data-options="iconCls:'icon-search'" onclick="ui_question_explain()">解析</a>
+			<a href="javascript:void(0);" id="btn_question_option_add"  class="easyui-linkbutton" data-options="iconCls:'icon-add'" onclick="ui_question_option_add()">增加选项</a>
+			<a href="javascript:void(0);" id="btn_question_option_delete"  class="easyui-linkbutton" data-options="iconCls:'icon-remove'" onclick="ui_question_option_delete()">删除选项</a>
+		</div>
+		<div id="ui_question_answer_box">试题答案:
+			<span id="ui_question_answer_div" style="width:98%">
+					<span id="span_question_answer1"><input type="radio" value="1" name="ui_question_answer" id="ui_question_answer1"/>A</span>
+					<span id="span_question_answer2"><input type="radio" value="2" name="ui_question_answer" id="ui_question_answer2"/>B</span>
+					<span id="span_question_answer3"><input type="radio" value="3" name="ui_question_answer" id="ui_question_answer3"/>C</span>
+					<span id="span_question_answer4"><input type="radio" value="4" name="ui_question_answer" id="ui_question_answer4"/>D</span>
+			</span>
+		</div>
+	</div>
+	</form>
+</div>

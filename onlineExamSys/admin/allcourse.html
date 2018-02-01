@@ -1,0 +1,161 @@
+<script type="text/javascript">
+	var ui_allcourse_oldSelectCourse;
+    $(function () {
+    	ui_allcourse_oldSelectCourse=-1;      
+    	ui_allcourse_init_list();
+    });
+	
+    function ui_allcourse_init_list(){
+    	
+        $("#ui_allcourse_dg").datagrid({       //初始化datagrid
+            url: "courseServlet.do?action=search",
+            striped: true, rownumbers: true, pagination: true, pageSize: 20,singleSelect:true,
+            idField: 'id',
+            sortName: 'id',
+            sortOrder: 'desc',
+            pageList: [20, 40, 60, 80, 100],
+            frozenColumns: [[
+                { field: 'ck', checkbox: true }
+                
+            ]],
+            columns: [[
+				{ field: 'name', title: '名称', sortable: true,width: 200 },
+                { field: 'code', title: '编码', sortable: true, width: 100 },
+                { field: 'deptName', title: '部门', sortable: true, width: 200},
+                {
+                    field: 'remark', title: '课程说明', width: 200,
+                    formatter: function (value, row, index) {                    	
+                        return value && value.length > 50 ? '<span title="' + value + '">' + value + '</span>' : value;
+                    }
+                }, 
+          		{ field: 'teacherName', title: '教师', sortable: true, width: 130 },
+          		{
+                    field: 'courseStatus', title: '课程状态', width: 200,
+                    formatter: function (value, row, index) {                     	
+                    	if(value==1) return "审核通过";
+                    	else if(value==2) return "考试";
+                    	else if(value==3) return "练习";
+                    	else return "未审核";
+                    	
+                    }
+                }
+            ]],
+            toolbar: '#ui_allcourse_tb'
+        });       
+    }
+    //添加
+    function ui_allcourse_add() {
+    	var rows = $("#ui_allcourse_dg").datagrid("getChecked");
+        if (rows.length != 1) {
+            $.show_warning("提示", "请先选择一门课程！");
+            $("#ui_allcourse_dg").datagrid('clearSelections').datagrid('clearChecked');
+            return;
+        }
+        var row = rows[0];
+        ui_dg_add_edit('创建组卷策略','ui_strategy','strategyServlet.do','strategyEdit.html','add',460,240,
+    			null,function(){
+    		$('#ui_strategy_course_edit').val(row.id);
+    		$('#ui_strategy_course_edit').hide();
+    		$('#ui_strategy_course_name_edit').val(row.name);
+    		$("#ui_strategy_name_edit").textbox("setValue",row.name+"_组卷策略");
+    		$('#ui_strategy_course_name_edit').show();
+    		
+    	}); 
+    }
+    
+    function ui_allcourse_audit(){
+    	var rows = $("#ui_allcourse_dg").datagrid("getChecked");
+        if (rows.length < 1) {
+            $.show_warning("提示", "请勾选要审核的课程");
+            return;
+        }
+        $.messager.confirm('提示', '确定要审核通过勾选的这' + rows.length + '门课程吗？', function (r) {
+            if (r) {
+                para = {};
+                para.action = "audit";
+                para.timespan = new Date().getTime();
+
+                var ids = [];
+                $.each(rows, function (i, row) {
+                    ids.push(row.id);
+                });
+                para.ids = ids.join(",");
+                $.ajax({
+                    url: "courseServlet.do",
+                    data: para,
+                    type: "POST",
+                    dataType: "json",
+                    success: function (data) {
+                        if (data.success) {
+                            $.show_warning("提示", "审核成功！");
+                            $("#ui_allcourse_dg").datagrid("reload").datagrid('clearSelections').datagrid('clearChecked');
+                        } else {
+                            $.show_warning("提示", data.msg);
+                        }
+                    }
+                });
+            }
+        });
+    }
+    
+    function ui_allcourse_searchdata(){
+    	var whereStr = "1=1";
+        
+        var name =  $('#ui_allcourse_name').textbox("getValue");       
+        var deptId = $('#ui_allcourse_dept_search').combotree("getValue");
+        
+        if (name != "") {
+            whereStr += " and name LIKE '%" + name + "%'";
+        }        
+        
+        if(deptId>0){
+       	 	whereStr += " and deptId = " + deptId  ;
+       	}
+        $("#ui_allcourse_dg").datagrid('load', {where:whereStr});
+        $("#ui_allcourse_dg").datagrid('clearSelections').datagrid('clearChecked');
+        $('#ui_allcourse_layout').layout('collapse', 'east');    //隐藏
+    }
+    
+    function ui_allcourse_cleardata() {
+        $('#ui_allcourse_tb input').val('');
+        $('#ui_allcourse_tb select').val('select');
+        
+        $("#ui_allcourse_dg").datagrid('load', {});
+
+        $("#ui_allcourse_dg").datagrid('clearSelections').datagrid('clearChecked');
+        $('#ui_allcourse_dg').layout('collapse', 'east');    //隐藏
+    }
+       
+</script>
+<div id="ui_allcourse_layout" class="easyui-layout" data-options="fit:true,border:false">	
+    <div data-options="region:'center',border:false">
+        <table id="ui_allcourse_dg" data-options="fit:true,border:false">
+        </table>
+    </div>
+    <div id="ui_allcourse_tb">
+			<table style="width: 100%; height: 100%; background: #F5F5F5;">
+				<tr>
+					<td>
+						<a href="javascript:void(0)" class="easyui-linkbutton" plain="true"
+						data-options="iconCls:'icon-audit'," onclick="ui_allcourse_audit()">审核</a> 
+						<a href="javascript:void(0)" class="easyui-linkbutton" plain="true"
+						data-options="iconCls:'icon-add'," onclick="ui_allcourse_add()">创建组考策略</a>						
+					</td>
+					<td>课程名称：<input id="ui_allcourse_name" class="easyui-textbox"
+						autocomplete="off" style="width: 130px;" /> 所属部门： <input
+						class="easyui-combotree" id="ui_allcourse_dept_search" name="deptId"
+						data-options="url:'departmentServlet.do?action=list',lines:true,editable:false,panelHeight:'200',panelWidth:'250'" />
+						<img style="cursor: pointer; vertical-align: middle;"
+						onclick="$('#ui_allcourse_dept_search').combotree('clear');"
+						alt="清空部门" title="清空部门" src="easyui/themes/icons/edit-clear.png" />
+
+						<a href="javascript:void(0);" class="easyui-linkbutton"
+						iconcls="icon-search" plain="true"
+						onclick="ui_allcourse_searchdata();">搜索</a> <a
+						href="javascript:void(0);" class="easyui-linkbutton"
+						iconcls="icon-clear" plain="true" onclick="ui_allcourse_cleardata();">清空条件</a>
+					</td>
+				</tr>
+			</table>
+		</div>    
+</div>

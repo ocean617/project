@@ -1,0 +1,1167 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>在线考试系统-在线考试</title>
+<link rel="stylesheet" type="text/css" href="admin/easyui/themes/default/easyui.css" />
+<link rel="stylesheet" type="text/css"  href="css/exam.css"  />
+<script src="admin/easyui/jquery.min.js"></script>	
+<script type="text/javascript" src="admin/easyui/jquery.easyui.min.js" ></script>
+<script type="text/javascript" src="admin/easyui/locale/easyui-lang-zh_CN.js" ></script>  
+<script type="text/javascript" charset="utf-8" src="admin/ueditor/ueditor.parse.min.js"> </script>
+<style>
+	.questionoption{
+		margin-top:5px;
+		font-size:14px;
+	}
+	.subquestionoption{
+	
+	}
+</style>
+</head>
+<body class="easyui-layout" >
+	
+    <div data-options="region:'north',border:false" style="height: 50px; background: #B3DFDA ; padding: 5px; font-size: 20px">        
+        <div style="font-size:16px;right: 5px; top: 5px;" id="div_student_info">  
+        	<p class="top_in top_in1">
+				考试名称:
+				<samp id="examname">XXX期末考试</samp>
+			</p>
+			<p class="top_in top_in1">
+				考生姓名:
+				<samp id="studentname">张三</samp>
+			</p>
+			<p class="top_in top_in1">
+				考生学号:
+				<samp id="examstarttime">0000000000</samp>
+			</p>
+			<p class="top_in top_in1">
+				考试时长:
+				<samp id="examduration">120</samp>分钟
+			</p>
+			
+			<p class="top_in top_in1">
+				试卷总分:
+				<samp id="examtotalscore">100.0</samp>
+			</p>       	         
+        </div>        
+    </div>
+    
+    <div id="examcontent" class="easyui-layout" data-options="region:'center',border:false">
+    	<div data-options="region:'west',split:true,title:'试题列表'" style="width: 350px; padding: 5px;">
+	    	<div>
+		        <div style="margin-left:50px;color:red">蓝色题号表示已保存，红色边框表示已标记！</div>
+				<table class="question" style="margin-top: 5px; width:300px" id="question_table">					
+				</table>
+			</div>
+	    </div>
+	    <div data-options="region:'center'" >
+	        <div class="easyui-layout" style="height:100%; background-color: #F0F0F0; border: 1px #A5C4FC solid; border-radius: 5px;">
+				<div data-options="region:'center',border:false,split:true">
+					<div class="easyui-layout" style="width:100%;height:100%" >
+						<div data-options="region:'center',title:'试题内容',split:true" >
+							<div id="quetionType" style="margin-left:5px;margin-top:5px;color:blue">试题类型</div>
+							<div id="question_title" style="padding:5px;"></div>
+						</div>
+						<div data-options="region:'south',title:'答题区',split:true" style="height:200px;">
+							<div id="target" style="padding:5px"></div>
+						</div>
+					</div>
+				</div>		
+				<div style="height:50px;" data-options="region:'south',split:true">
+					<div style="margin-top: 5px;" >
+						<div style="width: 150px;float: left;">
+							<label><input id="markbj" name="bj" type="checkbox" onclick="btnBj()" value="1" />标记 </label>
+						</div>
+						<div style="margin-top: 20px; float: right; margin-right: 60px; margin-top: 0px;">							
+							<input type="button" value="上一题" onclick="prevQuestion()"  class="btn1 btn-default" />
+							<input type="button" value="下一题" onclick="nextQuestion()" class="btn1 btn-default" /> 	
+							<input type="button" value="保存答案" onclick="saveSingleAnswer(true)" class="btn1 btn-default" /> 					
+						</div>
+					</div>
+				</div>	
+							
+			</div>
+	    </div>
+    </div>
+        
+    <div data-options="region:'south',border:false,split:true" style="height:50px">        
+        <div style="background: #B3DFDA ; margin: 5px; font-size: 20px">
+           <div class="top_in top_in1" style="margin-left: 50px;"> 剩余时间: <samp id="lefttime">00:00:00</samp> </div>
+			<div class="btns" style="float:right;margin-right:100px">
+				<input id="btnsubmit" type="button" value="交卷" class="btn btn-default" onclick="submitpaper();" />
+				<input id="btnsave"  type="hidden" value="保存试卷" class="btn btn-default" onclick="savepaper();" /> 				
+			</div>
+        </div>
+    </div>
+    <div id="layer" style="display:none;"></div> 
+    <div id="hintBox" style="display:none;font-size:32px;text-align:center;vertical-align:middle">正在保存答案，请稍候...</div> 
+	<script>		
+		$.extend({
+		    show_warning: function (strTitle, strMsg) {
+		        $.messager.show({
+		            title: strTitle,
+		            width: 300,
+		            height: 100,
+		            msg: strMsg,
+		            closable: true,
+		            showType: 'slide',
+		            style: {
+		                right: '',
+		                top: document.body.scrollTop + document.documentElement.scrollTop,
+		                bottom: ''
+		            }
+		        });
+		    },
+		    show_alert: function (strTitle, strMsg, okAction, okText,  w, h) {
+		        $("<div/>").dialog({
+			        id: "examing_common_dialog",
+			        content: "<div style='font-size:16px;padding:10px'>"+strMsg+"</div>",
+			        title: strTitle,			        
+			        height: h?h:200,
+			        width: w?w:300,
+			        modal: true,
+			        closable:false,
+			        buttons: [{
+			            id: "examing_common_okbtn",
+			            iconCls: "icon-ok",
+			            text:okText?okText:"确定" ,
+			            handler: function () {
+			                if(okAction) okAction();
+			                $("#examing_common_dialog").dialog('destroy');
+			            }
+			        }]
+			    });	
+		    },
+		    show_confirm: function (strTitle, strMsg, okText, okAction,cancelText, cancelAction,w,h) {
+		    	$("<div/>").dialog({
+			        id: "examing_common_dialog",
+			        content: "<div style='font-size:16px;padding:10px'>"+strMsg+"</div>",
+			        title: strTitle,			        
+			        height: h?h:200,
+			        width: w?w:300,
+			        modal: true,
+			        closable:false,
+			        buttons: [{
+			            id: "examing_common_okbtn",
+			            iconCls: "icon-ok",
+			            text:okText?okText:"确定" ,
+			            handler: function () {
+			                if(okAction) okAction();
+			                $("#examing_common_dialog").dialog('destroy');
+			            }
+			        },{
+			            id: "examing_common_cancelbtn",
+			            iconCls: "icon-no",
+			            text:cancelText?cancelText:"取消" ,
+			            handler: function () {
+			                if(cancelAction) cancelAction();
+			                $("#examing_common_dialog").dialog('destroy');
+			            }
+			        }]
+			    });			    		    	
+		    }
+		});
+		
+		
+		//开考到计时
+		var diffForStart;
+		var timerStarthandler;
+		var dlgxz;
+		
+		//考试计时器
+		var leftSeconds;			
+		var timerhandler;
+		
+		var examinfo;
+		var currentIdx;
+		var currentSubIdx;
+		var currentQuestionCategory;
+		var question_num;		
+		var needShowXz = true;
+									
+		$(function(){	
+			//disableKey();
+			hide_content();
+			tryStartExam();
+		});
+		
+			
+		function leftTimerForStart(){			
+			diffForStart--;
+			if(diffForStart>0){
+				timerStarthandler = window.setTimeout('leftTimerForStart()',1000);
+			}
+			//var attr = $("#examing_common_okbtn").attr('disabled');		
+			//console.log(attr);	
+			//if(attr!="disabled"){
+			//	$("#examing_common_okbtn").attr('disabled', "disabled");
+			//}
+			//秒
+			var s = diffForStart % 60;
+			
+			s = ("00"+s).substring( ("00"+s).length-2);
+			//分
+			var m = parseInt(diffForStart / 60);
+			
+			//时
+			var h = parseInt(m / 60);
+			h = ("00"+h).substring( ("00"+h).length-2);
+			
+			m = m % 60;
+			m = ("00"+m).substring( ("00"+m).length-2);
+							
+			$('#dlg_leftsecond').text("【"+h+":"+m+":"+s+"】");
+			
+			if(diffForStart<=0){
+				window.clearTimeout(timerStarthandler);	
+				needShowXz = false;
+				//$("#examing_common_okbtn").removeAttr('disabled'); //恢复按钮
+				$("#examing_common_okbtn").click();
+			}
+		}
+		
+		
+		function lefttimer(){
+			leftSeconds--;
+			if(leftSeconds>0){
+				timerhandler = window.setTimeout('lefttimer()',1000);
+			}
+			
+			//秒
+			var s = leftSeconds % 60;
+			s = ("00"+s).substring( ("00"+s).length-2);
+			
+			//分
+			var m = parseInt(leftSeconds / 60);
+			
+			//时
+			var h = parseInt(m / 60);
+			h = ("00"+h).substring( ("00"+h).length-2);
+			
+			m = m % 60;
+			m = ("00"+m).substring( ("00"+m).length-2);
+			
+			$('#lefttime').text(h+":"+m+":"+s);				
+			if(leftSeconds<=0){
+				//时间到，检测是否有延时				
+				$.ajax({
+					url:'examServlet.do',
+					data:{action:'getLeftTime'},
+					type:'POST',
+					dataType:'json',
+					success:function(data){						
+						if(data.success){		
+							leftSeconds = parseInt(data.msg);
+							clearTimeout(timerhandler);		
+							timerhandler = window.setTimeout('lefttimer()',1000);							
+						}
+						else if(data.status==1){					
+							$.show_warning("提示","时间到,系统自动提交试卷！");
+							setTimeout(function () {							    
+							    submitpaper2();
+							}, 2000);
+						}else{							
+							$.show_alert("错误",data.msg,out,"重新登录")	;												
+						}
+					}
+				});					
+			}
+		}
+		
+		
+		/*
+		 *检测是否可以开始考试
+		*/
+		function tryStartExam(){						
+			$.ajax({
+				url:'examServlet.do',
+				data:{action:'ifstart'},
+				type:'POST',
+				dataType:'json',
+				timeout: 11000, 
+	        	error: function (XMLHttpRequest, status){	
+	        		hideLayer();	        		
+	        		if(status=='timeout'){
+	        			$.show_alert("错误","连接超时，请检查网络或服务器！",tryStartExam);
+	        		}else{        		
+	        			$.show_alert("错误",""+status,tryStartExam);
+	        		}	        			        		
+				},
+				beforeSend:function(XMLHttpRequest){								  			            
+		        	showLayer("正在获取数据，请稍候....");
+		         },
+		         complete:function(XMLHttpRequest,textStatus){				              
+		             hideLayer();
+		         },
+				success:function(data){						
+					if(data.success){	//可以开始考试		
+						examinfo = eval('(' + data.msg + ')');    //转成json格式;	
+						var student = examinfo.student;	
+						if(student.examstatus==3){
+							$.show_alert("提示", "试卷已提交,您不能再进入考试！",out);								
+							return;
+						}
+						if(examinfo.leftSeconds<=0){
+							$.show_alert("提示","考试时间已经结束！",out);								
+							return;
+						}						
+						if(examinfo.reLogin){	
+							needShowXz = false;						
+							genPaper();
+						}else{
+							showStudentInfo();
+							dialgXz();
+							needShowXz = false;
+						}
+						
+					}else if(data.status<0 || data.status==9){							
+						$.show_alert("错误",data.msg,out,"重新登录")	;												
+					}else{
+						//开考未到时
+						var sinfo = eval('(' + data.msg + ')');    //转成json格式;	
+						$('#studentname').text(sinfo.name);
+						$('#examstarttime').text(sinfo.no);
+						$('#examname').text(sinfo.planName);
+						$('#examtotalscore').text(sinfo.totalScore);
+						$('#examduration').text(sinfo.duration);
+						
+						diffForStart = parseInt(sinfo.leftSecondsForStart);
+						window.clearTimeout(timerStarthandler);	
+						timerStarthandler = window.setTimeout('leftTimerForStart()',1000);
+						dialgXz();							
+					}
+				}
+			});
+		}	
+		function showStudentInfo(){
+			var user = examinfo.user;
+			var plan = examinfo.examPlan;
+			var student = examinfo.student;			
+			$('#studentname').text(user.name);
+			$('#examstarttime').text(user.no);
+			$('#examname').text(plan.name);
+			$('#examtotalscore').text(plan.totalScore);
+			$('#examduration').text(plan.duration);
+		}				
+		/*
+		显示考试须知
+		*/
+		function dialgXz() {
+			if(!needShowXz){
+				genPaper();
+				return;
+			}
+			$.show_alert("考生须知",
+						"1.携带具有发送或者接收信息功能设备的，无论是否使用，都按作弊处理。未开机的，取消当年全部科目考试成绩；开机的，视情节轻重，同时给予暂停该项考试1至3年的处理。<br/>"
+						+"2.市教育考试中心规定：⑴每科考试全部结束后，考生方可离开考场；考生不得以任何理由提前离开考场。在试卷、答题卡、草稿纸全部收齐，清点无误后考生方可有序退场。   ⑵考试期间一律不得上厕所。<br/>"
+						+"3.参加考试的考生不得佩带手表和其他任何类型的计时器进场考试。<br/> "
+						+"4.须认真学《准考证》背面的《考生须知》。<br/>"
+						+"5.思想品德开卷考试只能携带纸质文本材料（教材、教辅等）严禁携带电子文本进入考场。",
+				tryStartExam,"开始考试<span id='dlg_leftsecond'></span>", 600,400);
+		}
+				
+		/*
+		* 生成试卷
+		*/
+		function genPaper(exam){				
+			var str = [];					
+			var user = examinfo.user;
+			var plan = examinfo.examPlan;
+			var student = examinfo.student;
+			if(student.examstatus==3){
+				$.show_alert("提示", "试卷已提交,您不能再进入考试！");
+				return;
+			}
+			if(examinfo.leftSeconds<=0){
+				$.show_alert("提示","考试时间已经结束！");	
+				return;
+			}
+			$('#studentname').text(user.name);
+			$('#examstarttime').text(user.no);
+			$('#examname').text(plan.name);
+			$('#examtotalscore').text(plan.totalScore);
+			$('#examduration').text(plan.duration);
+			
+			var list = examinfo.list;			
+			var typeId;							
+			var data = [];
+			$('#question_table').empty();
+			var str ='<tr><th scope="col" colspan="8" align="center">试题列表</th></tr>';
+			str += '<tr>';
+			var k = 1;
+			question_num = list.length;
+			var t = 1;
+			for(var i=1;i<=list.length;i++,t++){				
+				k = i % 8;
+				var q = list[i-1];
+				var color = "";
+				if(q.questionTypeCategory==5){
+					//阅读理解
+					var subList = q.child;			    			
+	    			for(var j=1;j<=subList.length;j++,t++){
+	    				var sq = subList[j-1];
+	    				color = "";
+	    				if(sq.answer){
+							color = "color:blue;";							
+						}
+						if(sq.flag==1){
+							str += '<td><input type="button" id="qid'+(i-1)+'_'+(j-1)+'"  onclick="showQuestion('+(i-1)+','+(j-1)+')" class="bt2 btn-default" style="border-color:red;'+color+'" value="'+i+'_'+j+'" /></td>';
+						}else{
+							str += '<td><input type="button" id="qid'+(i-1)+'_'+(j-1)+'"  onclick="showQuestion('+(i-1)+','+(j-1)+')" class="bt2 btn-default" style="border-color:#D3D3D3;'+color+'" value="'+i+'_'+j+'" /></td>';
+						}
+						if(t%8==0){									
+							str += "</tr>"
+							data.push(str);
+							str = "<tr>";
+						}						
+	    			}
+	    			t--;
+					continue;
+				}
+				
+				if(q.answer){
+					color = "color:blue;";
+				}				
+				if(q.flag==1){
+					str += '<td><input type="button" id="qid'+(i-1)+'"  onclick="showQuestion('+(i-1)+')" class="bt2 btn-default" style="border-color:red;'+color+'" value="'+i+'" /></td>';
+				}else{
+					str += '<td><input type="button" id="qid'+(i-1)+'"  onclick="showQuestion('+(i-1)+')" class="bt2 btn-default" style="border-color:#D3D3D3;'+color+'" value="'+i+'" /></td>';
+				}
+				if(t%8==0){									
+					str += "</tr>"
+					data.push(str);
+					str = "<tr>";
+				}
+			}
+			if(k>0){
+				for(; k<8; k++){
+					str += '<td><input type="button"  disabled  class="bt2 btn-default" value="" /></td>';								
+				}
+				data.push(str);
+			}
+			
+			var html = data.join("");
+			if(html.length>0){
+				$('#question_table').append(html);
+			}
+			showQuestion(0);
+			//启动定时器，开始考试
+			leftSeconds = parseInt(examinfo.leftSeconds);
+			timerhandler = window.setTimeout("lefttimer()",1000);
+			show_exam();
+		}	
+							
+		/*
+		 *显示某个试题
+		 *idx:主试题索引号，subidx：阅读理解题子题号索引
+		*/
+		
+		function showQuestion(idx,subidx){
+			
+			var list = examinfo.list;
+			if(!list || list.length <=0 ) return;
+			if(currentIdx==idx && currentSubIdx==subidx) return;	
+					
+			currentIdx = idx;
+			currentSubIdx = subidx;
+			
+			var  detail = list[idx];	
+			currentQuestionCategory = detail.questionTypeCategory;
+			$('#question_table tr td input').css({'background-color':'white'});
+			if(currentQuestionCategory==5){
+				 $('#qid'+idx+'_'+subidx).css({'background-color':'red'});
+			}else{
+				$('#qid'+idx).css({'background-color':'red'});
+			}
+						
+			var questionTitle = '<div style="font-size: 16px;"><label>'+ (idx+1) +'. </label>' + detail.questionTitle + '</div>';
+			$("#quetionType").text(detail.questionTypeName);
+			$("#question_title").html(questionTitle);
+			var html="";			
+			if(detail.questionTypeCategory==1){	
+				
+				var options = detail.list;
+    			//单选题
+    			for(var i=0;i<options.length;i++){        			             	
+            		var opt = options[i];
+            		if(opt.label==detail.answer){
+            			html +='<div class="questionoption"><input name="q'+detail.paperId+'"  type="radio" checked value="'+opt.label+'" />'+opt.label+'. '+opt.questionOptionName+'</div>';	   
+            		}else{
+            			html +='<div class="questionoption"><input name="q'+detail.paperId+'"  type="radio"  value="'+opt.label+'" />'+opt.label+'. '+opt.questionOptionName+'</div>';	   
+            		}
+        		}
+    			
+    		}else if(detail.questionTypeCategory==2){
+    			//多选
+    			var options = detail.list;
+    			for(var i=0;i<options.length;i++){        			             		
+            		var opt = options[i];
+            		if(detail.answer && detail.answer.indexOf(opt.label)>=0){
+            			html +='<div class="questionoption"><input name="q'+detail.paperId+'"  type="checkbox" checked value="'+opt.label+'" />'+opt.label+'. '+opt.questionOptionName+'</div>';
+            		}else{
+            			html +='<div class="questionoption"><input name="q'+detail.paperId+'"  type="checkbox" value="'+opt.label+'" />'+opt.label+'. '+opt.questionOptionName+'</div>';
+            		}	            		
+        		}
+    			
+    		}else if(detail.questionTypeCategory==3){
+    			//判断
+    			if("1"==detail.answer){
+    				html +='<div class="questionoption"><input name="q'+detail.paperId+'" checked  type="radio" value="1" />正确</div>';
+    				html +='<div class="questionoption"><input name="q'+detail.paperId+'"  type="radio" value="2" />错误</div>';
+    			}else if("2"==detail.answer){
+    				html +='<div class="questionoption"><input name="q'+detail.paperId+'"  type="radio" value="1" />正确</div>';
+    				html +='<div class="questionoption"><input name="q'+detail.paperId+'" checked type="radio" value="2" />错误</div>';
+    			}else{
+    				html +='<div class="questionoption"><input name="q'+detail.paperId+'"  type="radio" value="1" />正确</div>';
+    				html +='<div class="questionoption"><input name="q'+detail.paperId+'"  type="radio" value="2" />错误</div>';    			
+    			}
+    				
+    		}else if(detail.questionTypeCategory==4){
+    			//填空题
+    			if(detail.answer){
+    				html +='<div style="padding:10px;"><textarea name="q'+detail.paperId+'" >'+detail.answer+'</textarea></div>';
+    			}else{
+    				html +='<div style="padding:10px;"><textarea name="q'+detail.paperId+'" ></textarea></div>';        			
+    			}
+    		}else if(detail.questionTypeCategory==5){
+    			//阅读理解
+    			var subs = detail.child;    			
+    			html += '<div>';
+    			for(var i=0;i<subs.length;i++){
+    				if(i==subidx){
+    					html += genSubQuestion(subs[i],i,idx);
+    					break;
+    				}
+    			}
+    			html += '</div>';
+    			detail = subs[subidx];
+    		}else{
+    			//其他类型试题处理
+    			if(detail.answer){
+    				html +='<div style="padding:10px;"><textarea name="q'+detail.paperId+'" >'+detail.answer+'</textarea></div>';
+    			}else{
+    				html +='<div style="padding:10px;"><textarea name="q'+detail.paperId+'" ></textarea></div>';        			
+    			}
+    		}
+			if(detail.flag==1){
+				if (!$('#markbj').prop("checked")) {						
+					$('#markbj').prop("checked",true);	
+				}
+			}else{
+				if ($('#markbj').prop("checked")) {						
+					$('#markbj').prop("checked",false);	
+				}
+			}
+			$('#target').html(html);				
+			uParse('#target', { rootPath: 'admin/ueditor/'});    
+			
+			//注册事件
+			$('#target [name=q'+detail.paperId+'][type=radio]').change(function(){					
+				saveSingleAnswer();
+			});
+			$('#target [name=q'+detail.paperId+'][type=checkbox]').change(function(){				
+				saveSingleAnswer();
+			});
+			$('#target textarea[name=q'+detail.paperId+'] ').blur(function(){				
+				saveSingleAnswer();
+			});
+						
+			$('textarea').each(function () { 
+				autoTextarea(this);
+			});
+		}	
+		
+		function prevQuestion(){
+			var list = examinfo.list;
+			if(!list || list.length <=0 ) return;
+			if(currentQuestionCategory!=5){
+				if(currentIdx-1 < 0) return;
+				var  detail = list[currentIdx-1];
+				if(detail.questionTypeCategory==5){					
+					var subs = detail.child;
+					showQuestion(currentIdx-1,subs.length-1); //显示最后一个子题
+				}else{
+					showQuestion(currentIdx-1);
+				}
+				
+			}else{ //当前为阅读理解类题
+				var preIdx = currentIdx;
+				var preSubIdx = currentSubIdx-1;
+				var  detail = list[currentIdx];
+				if(preSubIdx < 0){ //为子题的第1题					
+					preIdx = currentIdx-1;					
+					detail = list[preIdx];
+					
+					if(detail.questionTypeCategory==5){					
+						var subs = detail.child;
+						preSubIdx = subs.length-1;
+					}
+						
+				}					
+				if(detail.questionTypeCategory!=5){
+					//非阅读理解类
+					showQuestion(preIdx);
+				}else{
+					//为阅读类子题，需要显示子题
+					showQuestion(preIdx,preSubIdx);
+				}	
+			}				
+		}
+		
+		function nextQuestion(){
+			var list = examinfo.list;
+			if(!list || list.length <=0 ) return;
+			if(currentQuestionCategory!=5){
+				if(currentIdx+1 >= list.length ){					
+				 	return;
+				}
+				var detail = list[currentIdx+1];				
+				if(detail.questionTypeCategory==5){					
+					var subs = detail.child;
+					showQuestion(currentIdx+1,0); //显示第一个子题
+				}else{
+					showQuestion(currentIdx+1);
+				}				
+			}else{
+				var nextIdx = currentIdx;
+				var nextSubIdx = currentSubIdx+1;
+				var detail = list[currentIdx];
+				var subs = detail.child;
+				if(nextSubIdx >= subs.length){ //为子题的第1题					
+					nextIdx = currentIdx+1;
+					nextSubIdx = 0;
+					detail = list[nextIdx];
+				}					
+				if(detail.questionTypeCategory!=5){
+					//非阅读理解类
+					showQuestion(nextIdx);
+				}else{
+					//为阅读类子题，需要显示子题
+					showQuestion(nextIdx,nextSubIdx);
+				}	
+			}
+		}
+		
+		
+		/*
+			idx 子序号
+			pid 大题序号
+		*/
+		function genSubQuestion(detail,idx,pid){			
+			var html = '<div style="width: 99%;margin-bottom:10px; font-size: 16px;">';
+			html +=(idx+1) +'). ' + detail.questionTitle + '<hr/></div>';
+			
+			if(detail.questionTypeCategory==1){					
+				var options = detail.list;
+    			//单选题
+    			for(var i=0;i<options.length;i++){        			
+            		var opt = options[i];
+            		if(opt.label==detail.answer){
+            			html +='<div class="questionoption subquestionoption"><input pid="'+pid+'" idx="'+idx+'" name="q'+detail.paperId+'"   type="radio" checked value="'+opt.label+'" />'+opt.label+'. '+opt.questionOptionName+'</div>';	   
+            		}else{
+            			html +='<div class="questionoption subquestionoption"><input pid="'+pid+'" idx="'+idx+'" name="q'+detail.paperId+'"   type="radio"  value="'+opt.label+'" />'+opt.label+'. '+opt.questionOptionName+'</div>';	   
+            		}
+        		}
+    		}else if(detail.questionTypeCategory==2){
+    			var options = detail.list;    			
+    			for(var i=0;i<options.length;i++){        			
+            		var opt = options[i];
+            		if(detail.answer && detail.answer.indexOf(opt.label)>=0){
+            			html +='<div class="questionoption subquestionoption"><input pid="'+pid+'" idx="'+idx+'" name="q'+detail.paperId+'"  type="checkbox" checked value="'+opt.label+'" />'+opt.label+'. '+opt.questionOptionName+'</div>';
+            		}else{
+            			html +='<div class="questionoption subquestionoption"><input pid="'+pid+'" idx="'+idx+'" name="q'+detail.paperId+'"  type="checkbox" value="'+opt.label+'" />'+opt.label+'. '+opt.questionOptionName+'</div>';
+            		}	            		
+        		}
+    			//多选
+    		}else if(detail.questionTypeCategory==3){    			
+    			//判断
+    			if("1"==detail.answer){
+    				html +='<div class="questionoption subquestionoption"><input pid="'+pid+'" idx="'+idx+'" name="q'+detail.paperId+'" checked  type="radio" value="1" />正确</div>';
+    				html +='<div class="questionoption subquestionoption"><input pid="'+pid+'" idx="'+idx+'" name="q'+detail.paperId+'"  type="radio" value="2" />错误</div>';
+    			}else if("2"==detail.answer){
+    				html +='<div class="questionoption subquestionoption"><input pid="'+pid+'" idx="'+idx+'" name="q'+detail.paperId+'"  type="radio" value="1" />正确</div>';
+    				html +='<div class="questionoption subquestionoption"><input pid="'+pid+'" idx="'+idx+'" name="q'+detail.paperId+'" checked type="radio" value="2" />错误</div>';
+    			}else{
+    				html +='<div class="questionoption subquestionoption"><input pid="'+pid+'" idx="'+idx+'" name="q'+detail.paperId+'"  type="radio" value="1" />正确</div>';
+    				html +='<div class="questionoption subquestionoption"><input pid="'+pid+'" idx="'+idx+'" name="q'+detail.paperId+'"  type="radio" value="2" />错误</div>';    			
+    			}
+    				
+    		}else if(detail.questionTypeCategory==4){
+    			//填空题
+    			if(detail.answer){
+    				html +='<p style="padding:10px;"><textarea pid="'+pid+'" idx="'+idx+'" name="q'+detail.paperId+'" >'+detail.answer+'</textarea></p>';
+    			}else{
+    				html +='<p style="padding:10px;"><textarea pid="'+pid+'" idx="'+idx+'" name="q'+detail.paperId+'" ></textarea></p>';        			
+    			}
+    		}else if(detail.questionTypeCategory==5){
+    		
+    		}else{    			
+    			if(detail.answer){
+    				html +='<p style="padding:10px;"><textarea pid="'+pid+'" idx="'+idx+'" name="q'+detail.paperId+'" >'+detail.answer+'</textarea></p>';
+    			}else{
+    				html +='<p style="padding:10px;"><textarea pid="'+pid+'" idx="'+idx+'" name="q'+detail.paperId+'" ></textarea></p>';        			
+    			}
+    		}    
+			return html;
+		}	
+		
+		function hideLayer(){		  		
+		   $('#layer').dialog("close");
+		}
+		function showLayer(strTitle){  
+	        $('#layer').dialog({			    
+			    border:false,			    
+			    width:200,
+			    title:strTitle,
+			    closable: false,	       
+			    modal: true
+			});
+	        
+	    }      	
+		/*
+		* 保存单个试题的答案
+		*/		
+		function saveSingleAnswer(m){
+			
+			var list = examinfo.list;
+			if(!list || list.length <=0 ) return;
+			var cindex = currentIdx;
+			var d = list[cindex];
+			if(!d){
+				$.show_alert("错误","试题号"+cindex+"不存在！");
+				 return;
+			}
+			var paperId = d.paperId;
+			var sidx = currentSubIdx;		//子题序号			
+			var answer = "";
+			if(d.questionTypeCategory==5){		    			
+    			d = d.child[sidx];	    			
+    			paperId = d.paperId;
+    		}
+			if(d.questionTypeCategory==1 || d.questionTypeCategory==2 || d.questionTypeCategory==3){	
+				var s = [];
+				$('[name=q'+d.paperId+']:checked').each(function(){
+               		var v= $(this).attr('value');
+               		s.push(v);
+               	});               	
+				answer = s.join(',');						    				    						
+    		}else{
+    			answer = $('[name=q'+d.paperId+']').val();	    			
+    		}				
+    		if(m && (answer==null || answer=="" || answer.length==0)){
+    			$.show_alert("提示","请先答题再保存！");
+    			return;
+    		}
+    		if(answer==null || answer=="" || answer.length==0){    			
+    			return;
+    		}
+    		d.answer=answer;    			
+			//保存答案
+			$.ajax({
+				url:'examServlet.do',
+				data:{action:'answer', paperId: paperId, answer: answer},
+				type:'POST',
+				dataType:'json',
+				timeout: 60000, 
+	        	error: function (XMLHttpRequest, status){	
+	        		hideLayer();		
+	        		if(status=='timeout'){
+	        			$.show_alert("保存出错","连接 超时，请检查网络或服务器！");
+	        		}else{        		
+	        			$.show_alert("网络或服务器错误",status);
+	        		}
+				},
+				beforeSend:function(XMLHttpRequest){								  			            
+		        	showLayer("正在保存答案，请稍候....");
+		         },
+		         complete:function(XMLHttpRequest,textStatus){				              
+		             hideLayer();
+		         },
+				success:function(data){		
+					hideLayer();						
+					if(data.success){	
+						d.answer=answer;											
+						if(sidx>=0){								
+							$('#qid'+cindex+'_'+sidx).css("color","blue");
+						}else{
+							$('#qid'+cindex).css("color","blue");
+						}								
+					}else if(data.status < 0 ){
+						$.show_alert("错误",data.msg, out, "重新登录");
+					}
+					else{
+						$.show_alert("保存失败",data.msg);								
+					}
+				}								
+			});
+		}	
+		
+		function hide_content() {
+			$('#examcontent').hide();
+		}
+
+		function show_content() {
+			$('#examcontent').show();
+		}
+
+		function show_confirm(title,content,fn){			
+			$.show_confirm(title,content,'确定',function(){fn(true);},'取消',function(){fn(false);},250,150);
+		}
+			
+		function show_exam() {
+			show_content();	
+		}
+		function out() {
+			window.location.href = "login3.html";
+		}
+	
+		/*
+		 * 试题标记
+		*/
+		function btnBj() {
+			var list = examinfo.list;
+			if(!list || list.length <=0 ) return;
+			var cindex = currentIdx;				
+			var d = list[cindex];
+			if(!d) return ;
+			var qid='#qid'+cindex;
+			if(d.questionTypeCategory==5){
+				d = d.child[currentSubIdx];
+				qid=qid+'_'+currentSubIdx;
+			}
+			var flag = 0;
+			var f = $('[name=bj]:checked').val();				
+			if(f) flag=1;
+			if(flag!=d.flag){ 					
+				$.ajax({
+					url:'examServlet.do',
+					data:{action:'mark', paperId:d.paperId,flag:flag},
+					type:'POST',
+					dataType:'json',
+					timeout: 60000, 
+		        	error: function (XMLHttpRequest, status){	
+		        		hideLayer();		
+		        		if(status=='timeout'){
+		        			$.show_alert("保存出错","连接 超时，请检查网络或服务器！");
+		        		}else{        		
+		        			$.show_alert("网络或服务器错误",status);
+		        		}
+					},
+					beforeSend:function(XMLHttpRequest){								  			            
+			        	showLayer("正在保存标记，请稍候....");
+			         },
+			         complete:function(XMLHttpRequest,textStatus){				              
+			             hideLayer();
+			         },
+					success:function(data){													
+						if(data.success){								
+							d.flag = flag;
+							if(d.flag==1){									
+								$(qid).css("borderColor","red");
+								
+							}else{
+								$(qid).css("borderColor","#D3D3D3");						
+							}
+						}else{							
+							$.show_alert("错误",data.msg,out,"重新登录")	;								
+						}
+					}
+						
+				});
+			}				
+		}
+		
+		/*
+		 * 保存试卷
+		*/
+		var savetime;
+		function savepaper(){
+			var t = (new Date()).getTime();
+			if(savetime && (savetime-t)/1000/60 < 5){
+				$.show_alert("提示", "请至少每隔5分钟提交一次！");							
+				return;
+			}
+			
+			var list = examinfo.list;
+			var data = [];
+			for(var i=0;i<list.length;i++){
+				var p = list[i];
+				if(p.answer && p.answer.length>0){
+					p.answer = p.answer.replace(',','，');
+					data.push(p.paperId+'\t'+p.answer);
+				}
+				if(p.questionTypeCategory==5){
+					var subs = p.child;
+					for(var ii=0;ii<subs.length;ii++){
+						var pp = subs[ii];
+						if(pp.answer && pp.answer.length>0){
+							pp.answer = pp.answer.replace(',','，');
+							data.push(pp.paperId+'\t'+pp.answer);
+						}
+					} 
+				}
+			}
+			if(data.length < 1){
+				$.show_alert("提示", "您还没有作答，无需保存！");							
+				return;
+			}
+			var planId =  examinfo.examPlan.id;
+			$.ajax({
+				url:'examServlet.do',
+				data:{action:'save',planId:planId, data:data.join(',')},
+				type:'POST',
+				dataType:'json',
+				timeout: 60000, 
+	        	error: function (XMLHttpRequest, status){	
+	        		hideLayer();		
+	        		if(status=='timeout'){
+	        			$.show_alert("保存出错","连接 超时，请检查网络或服务器！");
+	        		}else{        		
+	        			$.show_alert("网络或服务器错误",status);
+	        		}
+				},
+				beforeSend:function(XMLHttpRequest){								  			            
+		        	showLayer("正在保存试卷，请稍候....");
+		         },
+		         complete:function(XMLHttpRequest,textStatus){				              
+		             hideLayer();
+		         },
+				success:function(data){
+					$.show_warning("提示",data.msg);
+					if(data.success){								
+						savetime = t;
+					}
+				}
+			});
+		}
+		
+		/*
+		 * 提交试卷前确认
+		*/
+		function submitpaper(){					
+			show_confirm('提示1', '你确定要提交吗？<br/>提交后将不可修改!', function (r) {
+				if(r){
+					show_confirm('提示2', '你真的确定要提交吗？<br/>提交后将不可修改!', function (rr) {
+						if(rr){
+							show_confirm('提示3', '再次确认：你确定要提交吗？<br/>提交后将不可修改!', function (rrr) {
+								if(rrr){
+									submitpaper2(1);
+								}									
+							});
+						}
+					});					
+				}
+			 });				
+		}
+		
+		//提交试卷
+		function submitpaper2(m){						
+			var list = examinfo.list;
+			var data = [];
+			for(var i=0;i<list.length;i++){
+				var p = list[i];
+				if(p.answer && p.answer.length>0){
+					p.answer = p.answer.replace(',','，');
+					data.push(p.paperId+'\t'+p.answer);
+				}
+				if(p.questionTypeCategory==5){
+					var subs = p.child;
+					for(var ii=0;ii<subs.length;ii++){
+						var pp = subs[ii];
+						if(pp.answer && pp.answer.length>0){
+							pp.answer = pp.answer.replace(',','，');
+							data.push(pp.paperId+'\t'+pp.answer);
+						}
+					} 
+				}
+			}
+			var planId =  examinfo.examPlan.id;
+			$.ajax({
+				url:'examServlet.do',
+				data:{action:'submit', op:m, planId:planId, data:data.join(',')},
+				type:'POST',
+				dataType:'json',
+				timeout: 60000, 
+	        	error: function (XMLHttpRequest, status){	
+	        		hideLayer();		
+	        		if(status=='timeout'){
+	        			$.show_alert("保存出错","连接 超时，请检查网络或服务器！");
+	        		}else{        		
+	        			$.show_alert("网络或服务器错误",status);
+	        		}
+				},
+				beforeSend:function(XMLHttpRequest){								  			            
+		        	showLayer("正在提交试卷，请稍候....");
+		         },
+		         complete:function(XMLHttpRequest,textStatus){				              
+		             hideLayer();
+		         },
+				success:function(data){						
+					if(data.success){			
+						$('[type=button]').prop("disabled",true);
+						$('#btnsubmit').prop("disabled",true);
+						clearTimeout(timerhandler);							
+						showExamEnd();
+					}else{
+						clearTimeout(timerhandler);		
+						$.show_alert("错误",data.msg,out,"重新登录")	;
+					}
+				}
+			});
+		}	
+		
+		function showExamEnd(){
+			hide_content();			
+			var content="<div style='font-size:32px;font-weight:bold;color:blue;text-align:center;margin-top:5px;'>考试结束!<br/>祝您取得好成绩！<div>";			    			
+			window.setTimeout(showLogin,30000);
+			$.show_alert("提示",content,out);
+		}
+		
+		function showLogin(){
+			$("#examing_common_dialog").dialog('destroy');
+			out();
+		}
+		
+		
+		function disableKey() {
+			$(document).attr('unselectable','on') 
+				.css({'-moz-user-select':'-moz-none', 
+				'-moz-user-select':'none', 
+				'-o-user-select':'none', 
+				'-khtml-user-select':'none', /* you could also put this in a class */ 
+				'-webkit-user-select':'none',/* and add the CSS class here instead */ 
+				'-ms-user-select':'none', 
+				'user-select':'none' 
+				}).bind('selectstart', function(){ return false; }); 
+			//禁用右键
+			
+			$(document).ready(function() {
+				$(document).bind("contextmenu", function(e) {
+					return false;
+				});
+			});
+			//禁用复制/粘贴
+			$('#examcontent').bind("cut copy paste", function(e) {
+				e.preventDefault();
+			});
+			$(document).keydown(
+				function(event) {
+					//ESC
+					if (event.keyCode == 27) {
+						event.keyCode = 0;
+						
+						return false;
+					}
+					/*
+					//屏蔽退格删除键
+					if (event.keyCode == 8) {
+						event.keyCode = 0;
+						return false;
+					}
+					 */
+					//屏蔽F5,F1刷新键
+					if (event.keyCode == 116
+							|| event.keyCode == 112) {
+						event.keyCode = 0;
+						return false;
+					}
+					//屏蔽alt+R , Ctrl+n  
+
+					if ((event.ctrlKey)
+							&& (event.keyCode == 67
+									|| event.keyCode == 82 || event.keyCode == 78)) {
+						event.keyCode = 0;
+						return false;
+					}
+
+					if ((event.shiftKey) && (event.keyCode == 121)) //屏蔽 shift+F10  
+						event.returnValue = false;
+					if (event.srcElement.tagName == "A"
+							&& event.shiftKey) {
+						//屏蔽 shift 加鼠标左键新开一网页 
+						return false;
+					}
+
+					if ((event.altKey)
+							&& ((event.keyCode == 37)
+									|| (event.keyCode == 39) || event.keyCode == 115)) {
+						//屏蔽 Alt+ 方向键 ←  		//屏蔽 Alt+ 方向键 →  	 	//屏蔽Alt+F4  	    
+						event.keyCode = 0;
+						return false;
+					}
+
+				});
+		}
+		
+		/**
+		 * 文本框根据输入内容自适应高度
+		 * @param                {HTMLElement}        输入框元素
+		 * @param                {Number}                设置光标与输入框保持的距离(默认0)
+		 * @param                {Number}                设置最大高度(可选)
+		 */
+		var autoTextarea = function (elem, extra, maxHeight) {
+		        extra = extra || 0;
+		        var isFirefox = !!document.getBoxObjectFor || 'mozInnerScreenX' in window,
+		        isOpera = !!window.opera && !!window.opera.toString().indexOf('Opera'),
+		                addEvent = function (type, callback) {
+		                        elem.addEventListener ?
+		                                elem.addEventListener(type, callback, false) :
+		                                elem.attachEvent('on' + type, callback);
+		                },
+		                getStyle = elem.currentStyle ? function (name) {
+		                        var val = elem.currentStyle[name];
+		 
+		                        if (name === 'height' && val.search(/px/i) !== 1) {
+		                                var rect = elem.getBoundingClientRect();
+		                                return rect.bottom - rect.top -
+		                                        parseFloat(getStyle('paddingTop')) -
+		                                        parseFloat(getStyle('paddingBottom')) + 'px';        
+		                        };
+		 
+		                        return val;
+		                } : function (name) {
+		                                return getComputedStyle(elem, null)[name];
+		                },
+		                minHeight = parseFloat(getStyle('height'));
+		 
+		        elem.style.resize = 'none';
+		 
+		        var change = function () {
+		                var scrollTop, height,
+		                        padding = 0,
+		                        style = elem.style;
+		 
+		                if (elem._length === elem.value.length) return;
+		                elem._length = elem.value.length;
+		 
+		                if (!isFirefox && !isOpera) {
+		                        padding = parseInt(getStyle('paddingTop')) + parseInt(getStyle('paddingBottom'));
+		                };
+		                scrollTop = document.body.scrollTop || document.documentElement.scrollTop;
+		 
+		                elem.style.height = minHeight + 'px';
+		                if (elem.scrollHeight > minHeight) {
+		                        if (maxHeight && elem.scrollHeight > maxHeight) {
+		                                height = maxHeight - padding;
+		                                style.overflowY = 'auto';
+		                        } else {
+		                                height = elem.scrollHeight - padding;
+		                                style.overflowY = 'hidden';
+		                        };
+		                        style.height = height + extra + 'px';
+		                        scrollTop += parseInt(style.height) - elem.currHeight;
+		                        document.body.scrollTop = scrollTop;
+		                        document.documentElement.scrollTop = scrollTop;
+		                        elem.currHeight = parseInt(style.height);
+		                };
+		        };
+		 
+		        addEvent('propertychange', change);
+		        addEvent('input', change);
+		        addEvent('focus', change);
+		        change();
+		};
+	</script>
+</body>
+</html>

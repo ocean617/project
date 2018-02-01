@@ -1,0 +1,26 @@
+﻿<div style="padding: 15px; overflow: hidden">
+    <form id="ui_menu_setbuttonform" method="post">
+        <table class="tableForm" style="width: 100%">
+            <tr>
+                <th>菜单名称：
+                </th>
+                <td>
+                    <input type="hidden" id="ui_menu_setbutton_menuid" name="ui_menu_setbutton_menuid" />
+                    <input type="text" id="ui_menu_setbutton_menuname" name="ui_menu_setbutton_menuname" style="width: 170px;"
+                        disabled="disabled" />
+                </td>
+            </tr>
+            <tr>
+                <th>包含按钮：
+                </th>
+                <td>
+                    <input class="easyui-combotree" id="ui_menu_setbutton_button" name="ui_menu_setbutton_button"
+                        style="width: 180px;" data-options="
+                    url: 'buttonServlet.do?action=list', onlyLeafCheck:true, multiple:true, lines:true,panelHeight:'200'" />
+                    <img style="cursor: pointer; vertical-align: middle;" onclick="$('#ui_menu_setbutton_button').combotree('clear');"
+                        alt="清空按钮" title="清空按钮" src="easyui/themes/icons/edit-clear.png" />
+                </td>
+            </tr>
+        </table>
+    </form>
+</div>

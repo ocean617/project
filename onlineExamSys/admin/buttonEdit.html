@@ -1,0 +1,44 @@
+﻿<div style="padding: 15px; overflow: hidden">
+    <form id="ui_button_editform" method="post">
+    <table class="tableForm" style="width:100%">
+        <tr>
+            <th>
+                名称：
+            </th>
+            <td>
+                <input type="hidden" name="id" id="ui_button_id_edit" />
+                <input type="text" name="name" id="ui_button_name_edit"
+                    class="easyui-textbox" data-options="required:true" autocomplete="off" />
+            </td>
+        </tr>
+        <tr>
+            <th>
+                编码：
+            </th>
+            <td>
+                <input type="text" name="code" id="ui_button_code_edit"
+                    class="easyui-textbox" data-options="required:true" autocomplete="off" />
+            </td>
+        </tr>
+         <tr>
+            <th>
+                图标：
+            </th>
+            <td>
+                <input type="text" name="icon" id="ui_button_icon_edit"
+                    class="easyui-textbox" data-options="required:true" autocomplete="off" />
+            </td>
+        </tr>  
+        <tr>
+            <th>
+                排序：
+            </th>
+            <td>
+                <input name="seqNo" id="ui_button_sort_edit" class="easyui-numberspinner" style="width: 70px;"
+                    value="10" data-options="min:1,max:100,editable:true">
+            </td>
+        </tr>
+              
+    </table>
+    </form>
+</div>

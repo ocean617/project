@@ -1,0 +1,68 @@
+<script type="text/javascript">	
+    $(function () {        
+    	ui_room_init_list();
+    });
+	
+    function ui_room_init_list(){
+    	
+        $("#ui_room_dg").datagrid({       //初始化datagrid
+            url: "roomServlet.do?action=search",
+            striped: true, rownumbers: true, pagination: true, pageSize: 20,
+            idField: 'id',
+            sortName: 'id',
+            sortOrder: 'asc',
+            pageList: [20, 40, 60, 80, 100],
+            frozenColumns: [[
+                { field: 'ck', checkbox: true }                
+            ]],
+            columns: [[
+				{ field: 'no', title: '编号', sortable: true,width: 80 },
+                { field: 'roomAddr', title: '名称', sortable: true, width: 200 },
+                { field: 'capacity', title: '容量', sortable: true, width: 80 },
+                { field: 'roomIp', title: 'IP', sortable: true, width: 150}
+            ]],            
+            toolbar: [{
+                text: '添加',
+                iconCls: 'icon-add',
+                handler: function () { ui_room_add(); }
+            }, {
+                text: '修改',
+                iconCls: 'icon-edit',
+                handler: function () { ui_room_edit(); }
+            }, {
+                text: '删除',
+                iconCls: 'icon-remove',
+                handler: function () { ui_room_delete(); }
+            }]
+        });       
+    }
+    //添加
+    function ui_room_add() {
+    	ui_dg_add_edit('添加考场','ui_room','roomServlet.do','roomEdit.html','add',320,240);  
+    }
+    //修改课程
+    function ui_room_edit() {
+    	var rows = $("#ui_room_dg").datagrid("getChecked");
+        if (rows.length != 1) {
+            $.show_warning("提示", "请先选择一个考场进行修改！");
+            $("#ui_room_dg").datagrid('clearSelections').datagrid('clearChecked');
+            return;
+        }
+        var row = rows[0];
+        
+        ui_dg_add_edit('修改考场','ui_room','roomServlet.do','roomEdit.html','edit',320,240,null,function(){
+            	$("#ui_room_editform").form("load",row);
+            });  
+    }
+    
+  //删除区域
+    function ui_room_delete() {
+    	ui_dg_delete('考场','ui_room','roomServlet.do');        
+    }    
+</script>
+<div id="ui_layout" class="easyui-layout" data-options="fit:true,border:false">
+    <div data-options="region:'center',border:false">
+        <table id="ui_room_dg" data-options="fit:true,border:false">
+        </table>
+    </div>
+</div>

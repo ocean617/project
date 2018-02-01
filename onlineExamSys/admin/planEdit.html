@@ -1,0 +1,84 @@
+﻿<script type="text/javascript">
+    //回车不提交表单，防止报405错误
+    $("#ui_plan_editform").find('input').on('keydown', function (e) {
+        var e = e || event;
+        var keyNum = e.which || e.keyCode;
+        return keyNum == 13 ? false : true;
+    })
+</script>
+<div style="padding: 1px; overflow: hidden">
+    <form id="ui_plan_editform" method="post">
+    <table class="tableForm" style="width:100%">
+        <tr>
+            <th>
+                计划名称：
+            </th>
+            <td>
+                <input type="hidden" name="id" id="ui_plan_id_edit" />
+                <input type="text" name="name" id="ui_plan_name_edit" class="easyui-textbox"
+                    data-options="required:true" autocomplete="off" />
+            </td>
+        </tr>
+        <tr>
+            <th>
+                组考策略：
+            </th>
+            <td>                
+                <input class="easyui-combobox" id="ui_plan_strategyId_edit" name="strategyId"
+                    data-options="url:'strategyServlet.do?action=list',valueField:'id',textField:'name',editable:false,required:true,panelHeight:200,panelWidth:250" />
+                    <img style="cursor: pointer; vertical-align: middle;" onclick="$('#ui_plan_strategyId_edit').combobox('clear');"
+                        alt="清空策略" title="清空策略" src="easyui/themes/icons/edit-clear.png" />
+            </td>
+        </tr>
+        <tr>
+            <th>
+                考试时间：
+            </th>
+            <td>                
+                <input name="beginTime" id="ui_plan_beginTime_edit" class="easyui-datetimebox" 
+                            editable="false" style="width: 160px;" />
+            </td>
+        </tr>
+        <tr>
+                <th>考试时长：
+                </th>
+                <td>
+                    <input type="text" name="duration" value="90" id="ui_strategy_duration_edit" class="easyui-numberbox" precision="0" data-options="required:true"  />(分钟)
+                </td>
+            </tr>
+            <tr>
+            	<th>考试方式：
+                </th>
+                <td>
+                    <select name="examPattern" id="ui_strategy_examPattern_edit" class="easyui-combobox"
+                        data-options="editable:false,required:true,panelHeight:'auto'" >
+                        	<option value="0">同题</option>
+                        	<option value="1">不同题</option>
+                        </select>
+                </td>
+            </tr>
+            <tr>
+            	<th>公布考试结果：
+                </th>
+                <td>
+                    <input type="checkbox" name="isShowResult" id="ui_strategy_showResult_edit" value="1"/>(默认不公布)
+                </td>
+            </tr>
+            <tr>
+            	<th>分配考场：
+                </th>
+                <td>
+                    <input type="checkbox" name="isArrangeRoom" id="ui_strategy_rrangeRoom_edit" value="1"/>(默认不分配)
+                </td>
+            </tr>
+        <tr>
+            <th>
+                监考单信息：
+            </th>
+            <td>
+                <textarea rows="3" cols="40" name="descrption" id="ui_plan_description_edit"></textarea>
+            </td>
+        </tr>
+    </table>
+    </form>
+</div>

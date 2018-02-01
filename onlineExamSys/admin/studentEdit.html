@@ -1,0 +1,81 @@
+<div style="padding: 1px; overflow: hidden">
+    <form id="ui_student_editform" method="post">
+        <table class="tableForm" style="width: 100%">
+            <tr>
+                <th>学号：
+                </th>
+                <td>
+                    <input type="hidden" name="id" id="ui_student_id_edit" />
+                    <input type="text" name="no" id="ui_student_no_edit" class="easyui-textbox"
+                        data-options="required:true" autocomplete="off" />
+                </td>
+                <th>密码：
+                </th>
+                <td>
+                    <input type="password" name="password" id="ui_student_userpwd_edit"
+                     class="easyui-textbox"  data-options="required:true" autocomplete="off" />
+                </td>
+            </tr>            
+            <tr>
+                <th>姓名：
+                </th>
+                <td>
+                    <input type="text" name="name" id="ui_student_name_edit" class="easyui-textbox" 
+                    data-options="required:true" autocomplete="off" />
+                </td>
+                <th>性别：
+                </th>
+                <td>
+                    <select name="sex" id="ui_student_sex_edit" class="easyui-combobox"
+                        data-options="editable:false,panelHeight:'auto'" >
+                        	<option value="男">男</option>
+                        	<option value="女">女</option>
+                        </select>
+                </td>
+            </tr>
+           
+            <tr>
+                <th>部门：
+                </th>
+                <td>
+                <input class="easyui-combotree" id="ui_student_dept_edit" name="deptId"
+                    data-options="url:'departmentServlet.do?action=list',lines:true,editable:false,panelHeight:'200',panelWidth:'250',required:true" />
+                    <img style="cursor: pointer; vertical-align: middle;" onclick="$('#ui_student_dept_edit').combotree('clear');"
+                        alt="清空部门" title="清空部门" src="easyui/themes/icons/edit-clear.png" />
+                </td>
+                <th>角色：
+                </th>
+                <td>
+                <input class="easyui-combobox" id="ui_student_role_edit" name="roleId"
+                    data-options="url:'roleServlet.do?action=list',valueField:'id',textField:'name',editable:false,panelHeight:'auto'" />
+                    <img style="cursor: pointer; vertical-align: middle;" onclick="$('#ui_student_role_edit').combobox('clear');"
+                        alt="清空角色" title="清空角色" src="easyui/themes/icons/edit-clear.png" />
+                </td>
+            </tr>           
+            <tr>
+                <th>电话：
+                </th>
+                <td>
+                    <input type="text" name="phone" id="ui_student_phone_edit" class="easyui-textbox"  autocomplete="off" />
+                </td>
+                <th>EMail：
+                </th>
+                <td>
+                    <input type="text" name="email" id="ui_student_email_edit" class="easyui-textbox"  autocomplete="off" />
+                </td>
+            </tr>          
+            <tr>
+            	<th>身份证：
+                </th>
+                <td>                	
+                     <input type="text" name="identitycard" id="ui_student_identitycard_edit" class="easyui-textbox"  autocomplete="off" />
+                </td>
+                <th>禁用：
+                </th>
+                <td>                	
+                    <input type="checkbox"  value="禁用" name="status" id="ui_student_status_edit" />
+                </td>
+            </tr>            
+        </table>
+    </form>
+</div>

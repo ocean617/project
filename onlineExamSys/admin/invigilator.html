@@ -1,0 +1,366 @@
+﻿<script type="text/javascript">
+    var ui_invigilator_oldSelectPlanId;
+    $(function () {
+    	ui_invigilator_oldSelectPlanId = -1;
+    	ui_invigilator_init_list();
+    });
+    function ui_invigilator_init_list(toolbar) {
+        $("#ui_invigilator_dg").datagrid({       //初始化datagrid
+            url: "planServlet.do?action=search",
+            striped: true, rownumbers: true, singleSelect: true,
+            idField: 'id',
+            sortName: 'beginTime',
+            sortOrder: 'desc',
+            pagination: true,
+            pageSize: 20,
+            pageList: [20, 40, 60, 80, 100],  
+            frozenColumns: [[
+                             { field: 'ck', checkbox: true }                             
+                         ]],
+            columns: [[
+					{ width: 200, title: '计划名称',  field: 'name', sortable: true },					
+					{ width: 150, title: '开考时间',  field: 'beginTime', sortable: true },
+					{ width: 60,  title: '考试时长',  field: 'duration' },
+					{ width: 150,  title: '结束时间',  field: 'endTime' },
+                    { width: 80,  title: '模式', field: 'examPattern', 
+                        formatter: function (value, row, index) {
+                            return value=="1" ? "同批不同题":"同批同题";
+                        }
+                    },
+                    {  width: 60, title: '分配考场', field: 'isArrangeRoom', 
+                        formatter: function (value, row, index) {
+                            return value=="1" ? "分配":"不分配";
+                        }
+                    },
+                    { width: 60,  title: '公开结果',  field: 'isShowResult',
+                        formatter: function (value, row, index) {
+                            return value=="1" ? "公开":"不公开";
+                        }
+                    },                   
+					{ width: 80, title: '计划人',  field: 'teacherName', sortable: true }				
+                    ]],           
+     		toolbar:'#ui_invigilator_tb',
+	        	onSelect: function (rowIndex, rowData) {
+	            if (ui_invigilator_oldSelectPlanId == rowData.id) {  //点选的是相同的角色就不再请求数据
+	                return;
+	            }
+	            ui_invigilator_oldSelectPlanId = rowData.id;   
+	
+	            var $ui_invigilator_layout = $("#ui_invigilator_layout");
+	            var eastRoleUser = $ui_invigilator_layout.layout("panel", "east");
+	
+	            if (eastRoleUser.panel("options").collapsed) {   //判断是否展开
+	                $ui_invigilator_layout.layout("expand", "east");
+	            }
+	            eastRoleUser.panel("setTitle", "【"+rowData.name + "】监考教师列表");
+	            if ($("#ui_invigilator_user_dg").data("datagrid")) {
+	                $("#ui_invigilator_user_dg").datagrid({       //请求数据
+	                    url: "invigilatorServlet.do?action=list&planId=" + ui_invigilator_oldSelectPlanId
+	                }).datagrid('clearSelections').datagrid('clearChecked');
+	            }
+	            else {
+	                $("#ui_invigilator_user_dg").datagrid({       //初始化datagrid
+	                	url: "invigilatorServlet.do?action=list&planId=" + ui_invigilator_oldSelectPlanId,
+	                    striped: true, rownumbers: true, singleSelect: true,
+	                    idField: 'id',
+	                    sortName: 'beginTime',
+	                    sortOrder: 'desc',
+	                    pagination: true,
+	                    pageSize: 20,
+	                    pageList: [20, 40, 60, 80, 100],  
+	                    frozenColumns: [[
+	                                     { field: 'ck', checkbox: true }                             
+	                                 ]],
+	                    columns: [[
+	                            { width: 80 , title: '考场', field: 'roomAddr',  sortable: true },        	               
+	        	                { width: 80 , title: '监考1', field: 'teacherName1',  sortable: true },
+	        	                { width: 80 , title: '监考2', field: 'teacherName2',  sortable: true },			
+	        					{ width: 150, title: '开考时间',  field: 'beginTime', sortable: true },
+	        					{ width: 60,  title: '考试时长',  field: 'duration' } 
+	                            ]],
+	               		toolbar:'#ui_invigilator_teacher_tb',
+	                });
+	            }
+        	}
+    
+        });
+
+    }
+    
+  	//安排监考老师
+  	function ui_invigilator_setInvigilator(){  	
+  		var rows = $("#ui_invigilator_dg").datagrid("getChecked");
+        if (rows.length < 1) {
+            $.show_warning("提示", "请先勾选要安排监考的考试计划！");
+            return;
+        }
+        if (rows.length > 1) {
+            $.show_warning("提示", "不支持同时给多个计划安排监考！");
+            $("#ui_invigilator_dg").datagrid('clearSelections').datagrid('clearChecked');
+            return;
+        }
+        var row = rows[0];
+        //初始化dialog
+        $("<div/>").dialog({
+            id: "ui_invigilator_setInvigilator_dialog",
+            href: "invigilatorTeacher.html",
+            title: "安排监考教师: " + row.name,
+            iconCls:"icon-assign",
+            height: 400,
+            width: 700,
+            modal: true,
+            buttons: [{
+                id: "ui_invigilator_setInvigilator_btn",
+                text: '分配',
+                iconCls: "icon-ok",
+                handler: function () {
+                	                	
+                	var total = $('#ui_invigilator_teacher_room_totals').text();                	
+                	
+                	if( total==0){
+                		$.show_alert('提示',"你选的考试没有安排考场，请先安排考场！");
+                    	return;
+                	}
+                	
+                	var cnt = $('#ui_invigilator_teacher_cntperroom').numberbox('getValue');
+                	if(!cnt || cnt==0){
+                		$.show_alert('提示',"请输入每场所需要的监考教师人数！");
+                    	return;
+                	}
+                	
+                	var teachers = $('#ui_invigilator_teacher_dg').datagrid('getChecked');
+                    var teacherIds = [];
+                    for (var i = 0; i < teachers.length; i++) {
+                    	teacherIds.push(teachers[i].id);    	//学生ID            
+                    }
+                    if(teacherIds.length < 1){
+                    	$.show_alert('提示',"请选择监考教师！");
+                    	return;
+                    }
+                    
+                    //所需要的全部监考老师
+                    var  n = total * cnt;
+                	/*
+                	if(n >  teacherIds.length){
+                		$.show_alert('提示',"你选的监考教师人数不足！");
+                    	return;
+                	}
+                	*/
+                    $('#ui_invigilator_setInvigilator_btn').linkbutton('disable');
+                    
+                    var planId = row.id;
+                    var para = {};
+                    para.action = "setInvigilator";
+                    para.timespan = new Date().getTime();
+                    para.teacherIds = teacherIds.join(',');
+                    para.planId = planId;
+                    para.countPerRoom= cnt;
+                    $.ajax({
+                        url: 'invigilatorServlet.do',
+                        data: para,
+                        type: "POST",
+                        dataType: "json",
+                        success: function (data) {
+                            if (data.success) {
+                            	$.show_warning("提示", data.msg);
+                            	$("#ui_invigilator_setInvigilator_dialog").dialog('close');  //销毁dialog对象
+                            	$("#ui_invigilator_user_dg").datagrid("reload").datagrid('clearSelections').datagrid('clearChecked');                     	                           
+                            } else {
+                                $('#ui_invigilator_setInvigilator_btn').linkbutton('enable');
+                                $.show_warning("提示", data.msg);
+                            }
+                        }
+                    });
+                }
+            }],
+            onLoad: function () {
+            	ui_invigilator_teacher_init_list(row.id);   
+            	ui_invigilator_teacher_getrooms(row.id);
+            },
+            onClose: function () {
+                $("#ui_invigilator_setInvigilator_dialog").dialog('destroy');  //销毁dialog对象
+            }
+        });
+  	}
+  	function ui_invigilator_importInvigilator(){
+  		var modname="ui_invigilator";
+		var rows = $("#ui_invigilator_dg").datagrid("getChecked");
+        if (rows.length < 1) {
+            $.show_warning("提示", "请先勾选要上传监考教师的考试计划");
+            return;
+        }
+        if (rows.length > 1) {
+            $.show_warning("提示", "不支持同时给多个计划上传监考教师");
+            $("#ui_invigilator_dg").datagrid('clearSelections').datagrid('clearChecked');
+            return;
+        }
+        var row = rows[0];
+		$('<div/>').dialog({
+			id : modname + "_upload_dialog",
+			href : 'invigilatorUpload.html',
+			title : '上传监考教师并导入',
+			iconCls : 'icon-import',
+			height : 200,
+			width : 380,
+			modal : true,
+			buttons : [ {
+				id : modname + "_upload_btn",
+				iconCls : 'icon-import',
+				text : '上传并导入',
+				handler : function() {	
+					$('#ui_invigilator_dlg_waiting').dialog({         	
+			      		modal: true,
+			      		title:'提示',
+			      		width:200,
+			      		height:80
+			      		}).dialog("open");
+					$("#ui_upload_invigilator_fm").form("submit", {
+	                    url: "invigilatorServlet.do?action=import&planId="+row.id,
+	                    onSubmit: function (param) {	                        
+	                        var v = $("#ui_upload_invigilator_fm_file").val(); 	 							                  
+	                        if (!v || v.length==0) {
+	                            $.show_alert('提示', '请选择要导入的监考教师文件!');
+	                            $("#ui_upload_invigilator_fm_file").focus();	                            
+	                            $('#ui_invigilator_dlg_waiting').dialog("close");
+	                            return false;
+	                        }	                        
+	                        $('#'+modname+'_upload_btn').linkbutton('disable');    //点击就禁用按钮，防止连击		                        
+	                        return true;
+	                    },
+	                    success: function (data) {     
+	                    	$('#ui_invigilator_dlg_waiting').dialog("close");
+	                        var dataJson = eval('(' + data + ')');    //转成json格式
+	                        if (dataJson.success) {	                            
+	                            $.show_warning("提示", dataJson.msg);
+	                            $("#ui_invigilator_user_dg").datagrid("reload").datagrid('clearSelections').datagrid('clearChecked');                    
+	                            $("#" + modname + "_upload_dialog").dialog('destroy');  
+	                        } else {
+	                            $('#'+modname+'_upload_btn').linkbutton('enable');   //恢复按钮
+	                            $.show_warning("提示", dataJson.msg);
+	                        }
+	                    }
+	                });
+				}
+			} ],
+			onLoad : function() {				
+					
+			},
+			onClose : function() {
+				$('#ui_invigilator_dlg_waiting').dialog("close");
+				$("#" + modname + "_upload_dialog").dialog('destroy'); //销毁dialog对象
+			}
+		});
+  	}
+  	
+  	function ui_invigilator_remove(){
+  		var rows = $("#ui_invigilator_user_dg").datagrid("getChecked");
+        if (rows.length < 1) {
+            $.show_warning("提示", "请先勾选要删除的监考!");
+            return;
+        }
+        $.messager.confirm('提示', '确定移除勾选的这' + rows.length + '个监考？', function (r) {
+            if (r) {
+            	
+            	var ids = [];
+                $.each(rows, function (i, row) {
+                    ids.push(row.id);
+                });
+            	
+                para = {};
+                para.action = "delete";
+                para.timespan = new Date().getTime();                                
+                para.ids = ids.join(",");
+                $.ajax({
+                	url: 'invigilatorServlet.do',
+                    data: para,
+                    type: "POST",
+                    dataType: "json",
+                    success: function (data) {
+                        if (data.success) {
+                            $.show_warning("提示", data.msg);
+                        	$("#ui_invigilator_user_dg").datagrid("reload").datagrid('clearSelections').datagrid('clearChecked');
+                            
+                        } else {
+                            $.show_warning("提示", data.msg);
+                        }
+                    }
+                });
+            }
+        });    
+  	}
+  	function ui_invigilator_printNote(){
+  		alert("暂未实现！");
+  	}
+  	
+  	function getWhere(){
+		var where = "1=1";		
+		var name = $('#ui_invigilator_name').textbox("getValue");		
+		var roomid = $('#ui_invigilator_roomId').combobox("getValue");		
+		if (ui_invigilator_oldSelectPlanId)
+			where += ' AND examplanId=' + ui_invigilator_oldSelectPlanId;
+		if (roomid)
+			where += ' AND examRoomId=' + roomid;	
+		if(name){
+			where += " AND (teacherName1 like '%"+name+"%' or teacherName2 like '%"+name+"%')";
+		}
+		return where;
+	}
+	
+	function ui_invigilator_search(){
+		var where = getWhere();
+		$("#ui_invigilator_user_dg").datagrid("load", {
+			where : where
+		}).datagrid('clearSelections').datagrid('clearChecked');
+	}
+</script>
+<div id="ui_invigilator_layout" class="easyui-layout" data-options="fit:true,border:false">
+    <div data-options="region:'east',split:true,border:true,collapsed:true" title="角色成员"
+        style="width: 45%;">
+        <table id="ui_invigilator_user_dg" data-options="fit:true,border:false">
+        </table>
+        
+        <div id="ui_invigilator_tb" class="datagrid-toolbar">
+			<table>
+				<tr>
+					<td><a href="javascript:void(0)" class="easyui-linkbutton" plain="true"
+						data-options="iconCls:'icon-assign',"
+						onclick="ui_invigilator_setInvigilator()">安排监考</a> 
+						<a href="javascript:void(0)" class="easyui-linkbutton" plain="true"
+						data-options="iconCls:'icon-assign',"
+						onclick="ui_invigilator_importInvigilator()">导入监考教师</a> 
+						<a href="javascript:void(0)"
+						class="easyui-linkbutton" plain="true"
+						data-options="iconCls:'icon-assign',"
+						onclick="ui_invigilator_printNote()">打印监考条</a>					
+					</td>
+				</tr>
+			</table>
+		</div>
+        <div id="ui_invigilator_teacher_tb" class="datagrid-toolbar">
+			<table>
+				<tr>					
+					<td>
+						考场: <input
+						id="ui_invigilator_roomId" class="easyui-combobox"
+						data-options="url:'roomServlet.do?action=list',textField:'roomAddr',valueField:'id',panelHeight:'200'" />
+						<img style="cursor: pointer; vertical-align: middle;"
+						onclick="$('#ui_invigilator_roomId').combobox('clear');"
+						alt="清空考场" title="清空考场" src="easyui/themes/icons/edit-clear.png" />
+						姓名：<input type="text" class="easyui-textbox" style="width:60px" id="ui_invigilator_name"/>
+						<a href="javascript:void(0)" class="easyui-linkbutton"
+						onclick="ui_invigilator_search()" iconCls="icon-search">查询</a>
+						<a href="javascript:void(0)"
+						class="easyui-linkbutton" plain="true"
+						data-options="iconCls:'icon-assign',"
+						onclick="ui_invigilator_remove()">删除</a>	
+							
+					</td>
+				</tr>
+			</table>
+		</div>
+    </div>
+    <div data-options="region:'center',border:false">
+        <table id="ui_invigilator_dg" data-options="fit:true,border:false">
+        </table>
+    </div>
+</div>

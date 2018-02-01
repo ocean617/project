@@ -1,0 +1,376 @@
+<script type="text/javascript">
+	var oldSelectCourse;
+    $(function () {
+        //getButton("course");        
+    	ui_course_init_list();
+    });
+	
+    function ui_course_init_list(){
+    	
+        $("#ui_course_dg").datagrid({       //初始化datagrid
+            url: "courseServlet.do?action=search&flag=1",
+            striped: true, rownumbers: true, pagination: true, pageSize: 20,singleSelect:true,
+            idField: 'id',
+            sortName: 'id',
+            sortOrder: 'desc',
+            pageList: [20, 40, 60, 80, 100],
+            frozenColumns: [[
+                { field: 'ck', checkbox: true }
+                
+            ]],
+            columns: [[
+				{ field: 'id', title: '课程ID', sortable: true,width: 80 },
+				{ field: 'name', title: '名称', sortable: true,width: 200 },
+                { field: 'code', title: '编码', sortable: true, width: 100 },
+                { field: 'deptName', title: '部门', sortable: true, width: 200},
+                {
+                    field: 'remark', title: '课程说明', width: 200,
+                    formatter: function (value, row, index) {                    	
+                        return value && value.length > 50 ? '<span title="' + value + '">' + value + '</span>' : value;
+                    }
+                }, 
+          		{ field: 'teacherName', title: '教师', sortable: true, width: 130 },
+          		{
+                    field: 'courseStatus', title: '课程状态', width: 200,
+                    formatter: function (value, row, index) {                     	
+                    	if(value==1) return "审核通过";
+                    	else if(value==2) return "考试";
+                    	else if(value==3) return "练习";
+                    	else return "未审核";
+                    	
+                    }
+                }
+            ]],
+            toolbar: '#ui_course_tb',
+            /*
+            toolbar: [{
+                text: '添加',
+                iconCls: 'icon-add',
+                handler: function () { ui_course_add(); }
+            }, {
+                text: '修改',
+                iconCls: 'icon-edit',
+                handler: function () { ui_course_edit(); }
+            }, {
+                text: '删除',
+                iconCls: 'icon-remove',
+                handler: function () { ui_course_delete(); }
+            },'-', {
+                text: '审核',
+                iconCls: 'icon-remove',
+                handler: function () { ui_course_audit(); }
+            }],
+            */
+            onSelect: function (rowIndex, rowData) {
+                if (oldSelectCourse && oldSelectCourse.id == rowData.id) {  //点选的是相同的角色就不再请求数据
+                    return;
+                }
+                oldSelectCourse = rowData;   
+                
+                $("#ui_course_unit_loading").text("正在加载数据，请稍候...");
+                $("#ui_course_unit_tree").hide();
+                $("#ui_course_unit_loading").show();
+                
+                var $ui_course_layout = $("#ui_course_layout");
+                var eastCourseUnit = $ui_course_layout.layout("panel", "east");
+                
+                if (eastCourseUnit.panel("options").collapsed) {   //判断是否展开
+                    $ui_course_layout.layout("expand", "east");
+                }
+                eastCourseUnit.panel("setTitle", "【"+rowData.name + "】课程结构");
+                
+                
+                $("#ui_course_unit_tree").tree({       //初始化tree
+                	url: "courseUnitServlet.do?action=list&courseId=" + rowData.id,
+                	lines: true,                	
+                	formatter: function (node) {
+                        var s = node.text;
+                        if (node.children) {
+                            s += '&nbsp;<span style=\'color:blue\'>(' + node.children.length + ')</span>';
+                        }
+                        return s;
+                    },
+                    onClick: function (node) {
+
+                    },
+                    onContextMenu: function (e, node) {
+                        //if (node.code.length > 3) return;
+                        e.preventDefault();
+                        $(this).tree('select',node.target);
+                        $('#ui_course_unit_tree_mm').menu('show',{
+                            left: e.pageX,
+                            top: e.pageY
+                        });
+                    },
+                    /*
+                    queryParams: {
+                    	id: node.id
+                    },
+                    onBeforeExpand: function (node) {
+                        $('#ui_course_unit_tree').tree('options').queryParams = { id: node.id};
+                    },
+                    */
+                    onLoadSuccess: function (node, data) {     
+                    	if(data && data.length>0){
+                        	$("#ui_course_unit_tree").show();
+                       		$("#ui_course_unit_loading").hide();
+                    	}else{
+                    		$("#ui_course_unit_loading").text("无课程单元！");
+                    	}
+                    }
+                    
+                });
+            }
+        });       
+    }
+    //添加
+    function ui_course_add() {
+    	ui_dg_add_edit('添加课程','ui_course','courseServlet.do','courseEdit.html','add',460,300);  
+    }
+    //修改课程
+    function ui_course_edit() {
+    	var rows = $("#ui_course_dg").datagrid("getChecked");
+        if (rows.length != 1) {
+            $.show_warning("提示", "请先选择一门课程进行修改！");
+            $("#ui_course_dg").datagrid('clearSelections').datagrid('clearChecked');
+            return;
+        }
+        var row = rows[0];
+        /*
+        if(row['courseStatus'] >= 2){
+        	$.show_warning("提示", "课程已经审核通过，不能再修改！");
+        	return;
+        }
+        */
+        ui_dg_add_edit('修改课程','ui_course','courseServlet.do','courseEdit.html','edit',460,300,null,function(){
+            	$("#ui_course_editform").form("load",row);
+            });  
+    }
+    
+  //删除课程
+    function ui_course_delete() {
+    	ui_dg_delete('课程','ui_course','courseServlet.do',function(){
+    		$("#ui_course_dg").datagrid('reload').datagrid('clearSelections').datagrid('clearChecked');    		
+            $("#ui_course_layout").layout("collapse", "east");
+    	});        
+    }
+    
+    function ui_course_audit(){
+    	var rows = $("#ui_course_dg").datagrid("getChecked");
+        if (rows.length < 1) {
+            $.show_warning("提示", "请勾选要审核的课程");
+            return;
+        }
+        $.messager.confirm('提示', '确定要审核通过勾选的这' + rows.length + '门课程吗？', function (r) {
+            if (r) {
+                para = {};
+                para.action = "audit";
+                para.timespan = new Date().getTime();
+
+                var ids = [];
+                $.each(rows, function (i, row) {
+                    ids.push(row.id);
+                });
+                para.ids = ids.join(",");
+                $.ajax({
+                    url: "buttonServlet.do",
+                    data: para,
+                    type: "POST",
+                    dataType: "json",
+                    success: function (data) {
+                        if (data.success) {
+                            $.show_warning("提示", "审核成功！");
+                            $("#ui_course_dg").datagrid("reload").datagrid('clearSelections').datagrid('clearChecked');
+                        } else {
+                            $.show_warning("提示", data.msg);
+                        }
+                    }
+                });
+            }
+        });
+    }
+    
+    function  ui_course_unit_add(){
+    	ui_dg_add_edit('添加课程单元','ui_course_unit','courseUnitServlet.do','courseUnitEdit.html','add',460,320,
+    	function(){    	   
+            $("#ui_course_unit_tree").tree("reload").tree('clearSelections');        
+    	},
+    	function(){
+    		
+    		$('#ui_course_unit_courseid_edit').val(oldSelectCourse.id);
+    		$('#ui_course_unit_coursename_edit').textbox("setValue",oldSelectCourse.name);
+    		$('#ui_course_unit_parentid_edit').combotree( {
+				url : 'courseUnitServlet.do?action=list&courseId='+oldSelectCourse.id,
+				method : 'get',					
+				lines:true,	
+				panelHeight : '200',
+				editable : false,
+				icons : [ {
+					iconCls : 'icon-tip'
+				} ]
+			});
+    		var row = {};
+    		row.courseId = oldSelectCourse.id;
+    		row.courseName=oldSelectCourse.name;
+    		var node = $('#ui_course_unit_tree').tree('getSelected');
+			if(node){    			
+				row.pid = node.id;
+    		}    		
+    		$('#ui_course_unit_editform').form('load',row);    		
+    	});      	
+    }
+    
+    function  ui_course_unit_edit(){
+    	var row = $('#ui_course_unit_tree').tree('getSelected');
+        if (!row) {
+            $.show_warning("提示", "请先选择一个单元进行修改！");
+            $("#ui_course_unit_tree").tree('clearSelections');
+            return;
+        }
+		    	
+    	ui_dg_add_edit('修改课程单元','ui_course_unit','courseUnitServlet.do','courseUnitEdit.html','edit',460,320,
+    	function(){    	   
+            $("#ui_course_unit_tree").tree("reload").tree('clearSelections');        
+    	},
+    	function(){
+    		
+    		$('#ui_course_unit_courseid_edit').val(oldSelectCourse.id);
+    		$('#ui_course_unit_coursename_edit').textbox("setValue",oldSelectCourse.name);
+    		$('#ui_course_unit_parentid_edit').combotree( {
+				url : 'courseUnitServlet.do?action=list&courseId='+oldSelectCourse.id,
+				method : 'get',					
+				lines:true,	
+				panelHeight : '200',
+				editable : false,
+				icons : [ {
+					iconCls : 'icon-tip'
+				} ]
+			});    		    	
+    		row.name=row.text;
+    		if(row.pid==0) row.pid=null;
+    		$('#ui_course_unit_editform').form('load',row);
+    	});  
+    	
+    }
+    
+    function ui_course_unit_delete() {
+    	var row = $("#ui_course_unit_tree").tree("getSelected");
+        if (!row) {
+            $.show_warning("提示", "请先勾选要删除的单元");
+            return;
+        }
+        $.messager.confirm('提示', '确定删除【'+row.text+'】？', function (r) {
+            if (r) {
+                para = {};
+                para.action = "delete";
+                para.timespan = new Date().getTime();
+                
+                var ids = [];
+                ids.push(row.id);
+                para.ids = ids.join(",");
+                $.ajax({
+                    url: 'courseUnitServlet.do',
+                    data: para,
+                    type: "POST",
+                    dataType: "json",
+                    success: function (data) {
+                        if (data.success) {
+                            $.show_warning("提示", "删除成功！");
+                            $("#ui_course_unit_tree").tree("reload").datagrid('clearSelections');
+                        } else {
+                            $.show_warning("提示", data.msg);
+                        }
+                    }
+                });
+            }
+        });       
+    }
+    
+    function ui_course_unit_refresh() {
+        var node = $('#ui_course_unit_tree').tree('getSelected');
+        $('#ui_course_unit_tree').tree('options').queryParams = { t: (new Date()).getTime(),id:node.id };
+        $('#ui_course_unit_tree').tree('reload', node.target);
+        //var pn = $('#ui_course_unit_tree').tree('getParent', node.target);
+        //if (node == null) {
+        //    $('#ui_course_unit_tree').tree('options').queryParams = {  };
+        //    $('#ui_course_unit_tree').tree('reload', null);
+        //} else {
+        //    $('#ui_course_unit_tree').tree('options').queryParams = { id: node.id };
+        //    $('#ui_course_unit_tree').tree('reload', node.target);
+        //}                    
+    }
+    function ui_course_unit_expand() {
+        var node = $('#ui_course_unit_tree').tree('getSelected');
+        $('#ui_course_unit_tree').tree('expandAll', node.target);
+    }
+    function ui_course_unit_collapse() {
+        var node = $('#ui_course_unit_tree').tree('getSelected');
+        $('#ui_course_unit_tree').tree('collapseAll', node.target);
+    }
+    
+    function ui_course_searchdata(){
+    	var whereStr = "1=1";
+        
+        var name =  $('#ui_course_name').textbox("getValue");       
+        var deptId = $('#ui_course_dept_search').combotree("getValue");
+        
+        if (name != "") {
+            whereStr += " and name LIKE '%" + name + "%'";
+        }        
+        
+        if(deptId>0){
+       	 	whereStr += " and deptId = " + deptId  ;
+       	}
+        $("#ui_course_dg").datagrid('load', {where:whereStr});
+        $("#ui_course_dg").datagrid('clearSelections').datagrid('clearChecked');
+        $('#ui_course_layout').layout('collapse', 'east');    //隐藏
+    }
+    
+    function ui_course_cleardata() {
+        $('#ui_course_tb input').val('');
+        $('#ui_course_tb select').val('select');
+        
+        $("#ui_course_dg").datagrid('load', {});
+
+        $("#ui_course_dg").datagrid('clearSelections').datagrid('clearChecked');
+        $('#ui_course_dg').layout('collapse', 'east');    //隐藏
+    }
+       
+</script>
+<div id="ui_course_layout" class="easyui-layout" data-options="fit:true,border:false">	
+    <div data-options="region:'center',border:false">
+        <table id="ui_course_dg" data-options="fit:true,border:false">
+        </table>
+    </div>
+    <div id="ui_course_tb">
+			<table style="width: 100%; height: 100%; background: #F5F5F5;">
+				<tr>
+					<td><a href="javascript:void(0)" class="easyui-linkbutton" plain="true"
+						data-options="iconCls:'icon-add'," onclick="ui_course_add()">添加</a>
+						<a href="javascript:void(0)" class="easyui-linkbutton" plain="true"
+						data-options="iconCls:'icon-edit'," onclick="ui_course_edit()">修改</a>
+						<a href="javascript:void(0)" class="easyui-linkbutton" plain="true"
+						data-options="iconCls:'icon-remove'," onclick="ui_course_delete()">删除</a>
+					</td>					
+				</tr>
+			</table>
+		</div>
+    <div data-options="region:'east',split:true,border:true,collapsed:true" title="课程结构"
+        style="width: 20%;">
+		<a href="javascript:void(0);" class="easyui-linkbutton"
+			iconcls="icon-add" plain="true" onclick="ui_course_unit_add();">添加单元
+		</a>
+		<div style="border-top: 1px solid gray;width:100%;padding:1px;height:1px"></div>
+		<div id="ui_course_unit_loading">正在加载数据，请稍候...</div>
+
+		<ul id="ui_course_unit_tree" data-options="fit:true,border:false"></ul>
+        <div id="ui_course_unit_tree_mm" class="easyui-menu" style="width:120px;">
+        	<div onclick="ui_course_unit_add()" data-options="iconCls:'icon-add'">添加</div>
+        	<div onclick="ui_course_unit_edit()" data-options="iconCls:'icon-edit'">修改</div>
+        	<div onclick="ui_course_unit_delete()" data-options="iconCls:'icon-remove'">删除</div>
+            <div class="menu-sep"></div>
+            <div onclick="ui_course_unit_expand()" data-options="iconCls:'icon-expand'">展开</div>
+            <div onclick="ui_course_unit_collapse()" data-options="iconCls:'icon-collapse'">收起</div>
+        </div>
+    </div>
+</div>

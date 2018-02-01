@@ -1,0 +1,264 @@
+﻿<script type="text/javascript">
+	var oldSelectMenuId;
+    $(function () {
+    	oldSelectMenuId = -1;
+    	ui_menu_init_list();        
+    });
+    function ui_menu_init_list(toolbar) {
+        $("#ui_menu_tg").treegrid({       //初始化datagrid
+            url: "menuServlet.do?action=search",
+            idField: 'id',
+            treeField: 'text',
+            rownumbers: true,
+            columns: [[
+                       { field: 'text', title: '菜单名称', width: 200 },                       
+                       { field: 'url', title: '链接地址', width: 200 },
+                       { field: 'iconCls', title: '图标', width: 150 },
+                       { field: 'seqNo', title: '排序', width: 80 },
+                       { field: 'menutype', title: '类型', width: 80,
+                           formatter: function (value, row, index) {                    	
+                               if(value==1) return "系统菜单";
+                               else return "业务菜单";
+                           } 
+                       },
+                       { field: 'menustatus', title: '状态', width: 80,
+                               formatter: function (value, row, index) {                    	
+                            	   if(value==1) return "显示";
+                                   else return "隐藏";
+                               } 
+                       }
+            ]],     
+            onSelect: function (rowData) {
+                if (oldSelectMenuId == rowData.id) {  //点选的是相同的角色就不再请求数据
+                    return;
+                }
+                oldSelectMenuId = rowData.id;   
+
+                var $ui_menu_layout = $("#ui_menu_layout");
+                var eastMenuButton = $ui_menu_layout.layout("panel", "east");
+
+                if (eastMenuButton.panel("options").collapsed) {   //判断是否展开
+                    $ui_menu_layout.layout("expand", "east");
+                }
+                eastMenuButton.panel("setTitle", "【"+rowData.text + "】按钮");
+                if ($("#ui_menu_button_dg").data("datagrid")) {
+                    $("#ui_menu_button_dg").datagrid({       //请求数据
+                        url: "buttonServlet.do?action=listByMenuId&menuId=" + rowData.id
+                    });
+                }
+                else {
+                    $("#ui_menu_button_dg").datagrid({       //初始化datagrid
+                    	url: "buttonServlet.do?action=listByMenuId&menuId=" +  rowData.id,
+                        striped: true,
+                        rownumbers: true,
+                        pagination: true,
+                        pageSize: 20,
+                        singleSelect: true,
+                        idField: 'id',
+                        sortName: 'seqNo',
+                        sortOrder: 'asc',
+                        pageList: [20, 40, 60, 80, 100],
+                        columns: [[
+                            { field: 'text', title: '名称', sortable: true,width: 120 },
+							{ field: 'code', title: '编码', sortable: true,width: 80 },
+                			{ field: 'iconCls', title: '图标 ', sortable: true, width: 80 },
+                			{ field: 'seqNo', title: '序号', sortable: true, width: 60}
+                			]]
+                    });
+                }
+            },
+            toolbar: [{
+                text: '添加',
+                iconCls: 'icon-add',
+                handler: function () { ui_menu_add(); }
+            }, {
+                text: '修改',
+                iconCls: 'icon-edit',
+                handler: function () { ui_menu_edit(); }
+            }, {
+                text: '删除',
+                iconCls: 'icon-remove',
+                handler: function () { ui_menu_delete() }
+            }, {
+                text: '分配按钮',
+                iconCls: 'icon-key',
+                handler: function () { ui_menu_setbutton() }
+            }, '-', {
+                text: '全部展开',
+                iconCls: 'icon-expand',
+                handler: function () { ui_menu_expandall(); }
+            }, {
+                text: '全部隐藏',
+                iconCls: 'icon-collapse',
+                handler: function () { ui_menu_collapseall(); }
+            }],
+            onDblClickRow: function (rowIndex, rowData) {     //双击行弹框编辑
+                ui_menu_edit();
+            }
+        });
+    }
+    function ui_menu_add() {
+    	ui_dg_add_edit('添加菜单','ui_menu','menuServlet.do','menuEdit.html','add',460,360,
+    		function(){	//fnSuccess
+    		 	$("#ui_menu_tg").treegrid("reload");
+    		},
+    		function(){//fnLoad
+    			
+    		},
+    		null
+    		);       
+    }
+    function ui_menu_edit() {        
+        var row = $("#ui_menu_tg").treegrid("getSelected");
+        if (!row) {
+            $.show_warning("提示", "请先勾选要修改的菜单");
+            return;
+        }
+        ui_dg_add_edit('修改菜单','ui_menu','menuServlet.do','menuEdit.html','edit',460,360,
+        		function(){	//fnSuccess
+        		 	$("#ui_menu_tg").treegrid("reload");
+        		},
+        		function(){//fnLoad
+        			row.icon = row.iconCls;
+        			row.name=row.text;
+        			$('#ui_menu_editform').form('load',row);
+        		},
+        		null
+        		);             
+    }
+    function ui_menu_delete() {
+        var rows = $("#ui_menu_tg").treegrid("getChecked");
+        if (rows.length < 1) {
+            $.show_warning("提示", "请先勾选要删除的菜单");
+            return;
+        }
+        $.messager.confirm('提示', '确定删除勾选的这' + rows.length + '个菜单？如果有子菜单也会同时删除！', function (r) {
+            if (r) {
+                para = {};
+                para.action = "delete";
+                para.timespan = new Date().getTime();
+               
+                var ids = [];
+                $.each(rows, function (i, row) {
+                    ids.push(row.id);
+                });
+                para.ids = ids.join(',');
+                $.ajax({
+                    url: "menuServlet.do",
+                    data: para,
+                    type: "POST",
+                    dataType: "json",
+                    success: function (data) {
+                        if (data.success) {
+                            $.show_warning("提示", "删除成功！");
+                            $("#ui_menu_tg").treegrid("reload").treegrid('clearSelections').treegrid('clearChecked');
+                            $("#ui_menu_layout").layout("collapse", "east");
+                        } else {
+                            $.show_warning("提示", data.msg);
+                        }
+                    }
+                });
+            }
+        });
+    }
+    
+    function ui_menu_setbutton(){
+    	var rows = $("#ui_menu_tg").treegrid("getChecked");
+        if (rows.length < 1) {
+            $.show_warning("提示", "请先勾选要分配按钮的菜单");
+            return;
+        }
+        if (rows.length > 1) {
+            $.show_warning("提示", "无法批量分配菜单对应的按钮");
+            $("#ui_menu_tg").treegrid('clearSelections').treegrid('clearChecked');
+            return;
+        }
+        var row = rows[0];
+        if (row.pid == 0 || row.pid == "") {
+            $.show_warning("提示", "根节点无法分配按钮");
+            $("#ui_menu_tg").treegrid('clearSelections').treegrid('clearChecked');
+            return;
+        }
+        
+        //初始化dialog
+        $("<div/>").dialog({
+            id: "ui_menu_setbutton_dialog",
+            href: "menuButton.html",
+            title: "按钮分配：" + row.text,
+            iconCls: 'icon-link',
+            height: 300,
+            width: 380,
+            modal: true,
+            buttons: [{
+                id: "ui_menu_setbutton_btn",
+                text: '分配',
+                iconCls: 'icon-link',
+                handler: function () {
+                    $('#ui_menu_setbutton_btn').linkbutton('disable');
+                    setbutton(row.id);  //为菜单分配按钮
+                }
+            }],
+            onLoad: function () {
+                $("#ui_menu_setbutton_menuname").val(row.text);
+                $("#ui_menu_setbutton_menuid").val(row.id);
+               	if(row.buttonIds){
+                	$('#ui_menu_setbutton_button').combotree("setValues",row.buttonIds);
+               	}
+            },
+            onClose: function () {
+                $("#ui_menu_setbutton_dialog").dialog('destroy');  //销毁dialog对象
+            }
+        });
+    }
+
+    function setbutton(menuId) {
+        var buttonIds = [];
+        
+        var nodes = $('#ui_menu_setbutton_button').combotree("tree").tree('getChecked');        
+        for (var i = 0; i < nodes.length; i++) {
+            buttonIds.push(nodes[i].id );
+            //最终拼接示例：1,2, 按钮id列表
+        }
+        var para = {};
+        para.action = "setbutton";
+        para.timespan = new Date().getTime();
+        para.buttonIds = buttonIds.join(',');
+        para.menuId = menuId;
+
+        $.ajax({
+            url: "buttonServlet.do",
+            data: para,
+            type: "POST",
+            dataType: "json",
+            success: function (data) {
+                if (data.success) {
+                    $("#ui_menu_setbutton_dialog").dialog('destroy');  //销毁dialog对象
+                    $.show_warning("提示", "分配成功！");
+                    $("#ui_menu_tg").treegrid("reload").treegrid('clearSelections').treegrid('clearChecked');
+                    $("#ui_menu_button_dg").datagrid("reload").datagrid('clearSelections').datagrid('clearChecked');
+                } else {
+                    $('#ui_menu_setbutton_btn').linkbutton('enable');
+                    $.show_warning("提示", data.msg);
+                }
+            }
+        });
+    }
+    
+    function ui_menu_expandall() {
+        $("#ui_menu_tg").treegrid("expandAll");
+    }
+    function ui_menu_collapseall() {
+        $("#ui_menu_tg").treegrid("collapseAll");
+    }
+</script>
+<div id="ui_menu_layout" class="easyui-layout" data-options="fit:true,border:false">
+	<div data-options="region:'east',split:true,border:true,collapsed:true" title="角色成员"
+        style="width: 40%;">
+        <table id="ui_menu_button_dg" data-options="fit:true,border:false">
+        </table>
+    </div>
+    <div data-options="region:'center',border:false">
+        <table id="ui_menu_tg" data-options="fit:true,border:false">
+        </table>
+    </div>
+</div>

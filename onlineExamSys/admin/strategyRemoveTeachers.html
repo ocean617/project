@@ -1,0 +1,34 @@
+<script type="text/javascript">	
+
+    function ui_strategy_remove_teacher_init_list(strategyId) {
+    	 if ($("#ui_strategy_remove_teacher_dg").data("datagrid")) {
+			$("#ui_strategy_remove_teacher_dg").datagrid({       //请求数据
+			   url: "strategyServlet.do?action=listTeachers&strategyId="+strategyId,
+			});
+      	}
+     	else {
+	        $("#ui_strategy_remove_teacher_dg").datagrid({       //初始化datagrid
+	            url: "strategyServlet.do?action=listTeachers&strategyId="+strategyId,
+	            striped: true, rownumbers: true, 
+	            idField: 'id',
+	            sortName: 'id',
+	            sortOrder: 'desc',
+	            frozenColumns: [[
+	                             { field: 'ck', checkbox: true }
+	                             ]],
+	            columns: [[
+						   {  field: 'id' , title: '编号',width: 80},
+						   { field: 'teacherNo',  title: '工号',width: 80  },
+						   { field: 'teacherName',  title: '姓名',width: 100  }            
+	            	]],             
+	        });    
+        }    
+    }
+      
+</script>
+<div id="ui_strategy_remove_teacher_layout" class="easyui-layout" data-options="fit:true,border:false">    
+    <div data-options="region:'center',border:false">    	
+        <table id="ui_strategy_remove_teacher_dg" data-options="fit:true,border:false,footer:'#ft'">
+        </table>
+    </div>    	
+</div>

@@ -1,0 +1,255 @@
+<script type="text/javascript">
+	$(function () {
+    	ui_teacher_init_list();
+        //回车搜索
+        /*
+        $("#ui_teacher_search").find('input').on('keyup', function (event) {
+            if (event.keyCode == '13') {
+                ui_teacher_searchdata();
+            }
+        })*/
+    });
+
+    function ui_teacher_init_list(toolbar) {
+        $("#ui_teacher_dg").datagrid({       //初始化datagrid
+            url: "teacherServlet.do?action=search",
+            striped: true, rownumbers: true, pagination: true, pageSize: 20,
+            idField: 'id',
+            sortName: 'regTime',
+            sortOrder: 'desc',
+            pageList: [20, 40, 60, 80, 100],
+            frozenColumns: [[
+                             { field: 'ck', checkbox: true }
+                             ]],
+            columns: [[
+						{ width: 100, title: '工号', field: 'no', sortable: true },
+					   { field: 'name',  title: '姓名',width: 80, sortable: true },
+					   { field: 'phone',  title: '电话',width: 80, sortable: true },
+                       { field: 'roleName', title: '角色', width: 180, sortable: true },
+                       { field: 'deptName', title: '部门', width: 150, sortable: true},
+                       { field: 'status', title: '状态', width: 60, sortable: true },
+                       { field: 'regTime', title: '注册时间', sortable: true, width:80,  
+                           formatter: function (value, row, index) {
+                        	   if(value && value.length>10) return value.substring(0,10);
+                           } },
+                       { field: 'loginTime', title: '登录时间', sortable: true, width: 120 },
+                       { field: 'loginIp', title: '登录IP', sortable: true, width: 120 }
+            	]],           
+            toolbar: [{
+                text: '添加',
+                iconCls: 'icon-add',
+                handler: function () { ui_teacher_add(); }
+            }, {
+                text: '修改',
+                iconCls: 'icon-edit',
+                handler: function () { ui_teacher_edit(); }
+            }, {
+                text: '删除',
+                iconCls: 'icon-remove',
+                handler: function () { ui_teacher_delete() }
+            }, '-',{
+                text: '角色设置',
+                iconCls: 'icon-key',
+                handler: function () { ui_teacher_setrole() }
+            }],
+
+            onDblClickRow: function (rowIndex, rowData) {     //双击行弹框编辑
+                //被编辑列高亮，其他列去除高亮
+                $("#ui_teacher_dg").datagrid('clearSelections').datagrid('clearChecked').datagrid('checkRow', rowIndex);
+                ui_teacher_edit();
+            }
+        });
+    }
+
+    //添加用户
+    function ui_teacher_add() {
+    	ui_dg_add_edit('添加教师','ui_teacher','teacherServlet.do','teacherEdit.html','add',600,280);  
+    }
+    //修改用户
+    function ui_teacher_edit() {
+        var rows = $("#ui_teacher_dg").datagrid("getChecked");
+        if (rows.length < 1) {
+            $.show_warning("提示", "请先勾选要修改的教师或者双击某位教师");
+            return;
+        }
+        if (rows.length > 1) {
+            $.show_warning("提示", "不支持批量修改");
+            $("#ui_teacher_dg").datagrid('clearSelections').datagrid('clearChecked');
+            return;
+        }        
+        var row = rows[0];
+        
+        ui_dg_add_edit('修改教师','ui_teacher','teacherServlet.do','teacherEdit.html','edit',600,280,
+        		null,
+        		function(){
+        			$("#ui_teacher_editform").form("load",row);
+        		}
+        );
+    }
+    //删除用户（可批量）
+    function ui_teacher_delete() {
+    	ui_dg_delete('教师','ui_teacher','teacherServlet.do');    
+    }
+    
+    //角色设置（可批量）
+    function ui_teacher_setrole() {
+        var rows = $("#ui_teacher_dg").datagrid("getChecked");
+        if (rows.length < 1) {
+            $.show_warning("提示", "请先勾选要设置角色的教师");
+            return;
+        }
+        var row = rows[0];
+        $("<div/>").dialog({
+            id: "ui_teacher_setrole_dialog",
+            href: "teacherSetRole.html",
+            title: rows.length == 1 ? "设置角色" : "批量设置角色：" + rows.length + " 名教师",
+            iconCls: "icon-key",
+            height: 200,
+            width: 380,
+            modal: true,
+            buttons: [{
+                id: "ui_teacher_setrole_btn",
+                text: '确 定',
+                iconCls:'icon-ok',
+                handler: function () {
+                    $("#ui_teacher_setroleform").form("submit", {
+                        url: 'teacherServlet.do',
+                        onSubmit: function (param) {
+                            $('#ui_teacher_setrole_btn').linkbutton('disable');    //点击就禁用按钮，防止连击
+                            param.action = 'setrole';
+                        },
+                        success: function (data) {
+                            var dataJson = $.parseJSON(data);    //转成json格式
+                            if (dataJson.success) {
+                                $("#ui_teacher_setrole_dialog").dialog('destroy');  //销毁dialog对象
+                                $.show_warning("提示", "角色设置成功！");
+                                $("#ui_teacher_dg").datagrid("reload").datagrid('clearSelections').datagrid('clearChecked');
+                            } else {
+                                $('#ui_teacher_setrole_btn').linkbutton('enable');   //恢复按钮
+                                $.show_warning("提示", dataJson.msg);
+                            }
+                        }
+                    });
+                }
+            }],
+            onLoad: function () {
+                if (rows.length == 1) {   //如果是设置一个用户就自动勾选已经有的角色
+                    $('#ui_teacher_setrole_role').combobox('setValue', row.roleId);
+                    $("#ui_teacher_setrole_userid").val(row.id);
+                    $("#ui_teacher_setrole_username").val(row.name+"【"+row.no+"】");
+                }
+                else {
+                    var userids = [];
+                    var usernames = [];
+                    for (var i = 0; i < rows.length; i++) {
+                    	userids.push(rows[i].id);
+                    	usernames.push(rows[i].name+"【"+rows[i].no+"】" );                        
+                    }
+                    $("#ui_teacher_setrole_userid").val(userids.join(','));
+                    $("#ui_teacher_setrole_username").val(usernames.join(','));
+                }
+            },
+            onClose: function () {
+                $("#ui_teacher_setrole_dialog").dialog('destroy');  //销毁dialog对象
+            }
+        });
+    }
+    function ui_teacher_searchdata() {
+        var whereStr = "1=1";
+        var no = $('#ui_teacher_search').find('[name=ui_teacher_no]').val();
+        var name =  $('#ui_teacher_search').find('[name=ui_teacher_name]').val();       
+        var deptId = $('#ui_teacher_dept_search').combotree("getValue");
+        var stime = $('#ui_teacher_regtime_start').datebox('getValue');
+        var etime = $('#ui_teacher_regtime_end').datebox('getValue');
+        if (no != "") {
+            whereStr += " and no LIKE '%" + no + "%'";
+        }
+        if (name != "") {
+            whereStr += " and name LIKE '%" + name + "%'";
+        }        
+        if (stime != "") {
+            whereStr += " and regTime > '" + stime + "'";
+        }
+        if (etime != "") {
+            whereStr += " and regTime < '" + etime + "'";
+        }
+        if(deptId>0){
+       	 whereStr += " and deptId = " + deptId  ;
+       }
+        $("#ui_teacher_dg").datagrid('load', {where:whereStr});
+        $("#ui_teacher_dg").datagrid('clearSelections').datagrid('clearChecked');
+        $('#ui_teacher_layout').layout('collapse', 'west');    //隐藏
+    }
+    function ui_teacher_cleardata() {
+        $('#ui_teacher_search input').val('');
+        $('#ui_teacher_search select').val('select');
+        
+        $("#ui_teacher_dg").datagrid('load', {});
+
+        $("#ui_teacher_dg").datagrid('clearSelections').datagrid('clearChecked');
+        $('#ui_teacher_layout').layout('collapse', 'west');    //隐藏
+    }
+</script>
+<div id="ui_teacher_layout" class="easyui-layout" data-options="fit:true,border:false">
+    <div data-options="region:'west',split:true,border:true,collapsed:true" title="多条件查询"
+        style="width: 280px;">
+        <div id="ui_teacher_search">
+            <table class="tableForm" style="width: 100%; height: 100%; background: #F5F5F5;">
+                <tr>
+                    <th>工号：
+                    </th>
+                    <td>
+                        <input name="ui_teacher_no" class="easyui-textbox"  autocomplete="off" style="width: 130px;" />
+                    </td>
+                </tr>
+                <tr>
+                    <th>姓名：
+                    </th>
+                    <td>
+                        <input name="ui_teacher_name" class="easyui-textbox"  autocomplete="off" style="width: 130px;" />
+                    </td>
+                </tr>   
+                <tr>
+                    <th>部门：
+                    </th>
+                    <td>
+                        <input class="easyui-combotree" id="ui_teacher_dept_search" name="deptId"
+                    data-options="url:'departmentServlet.do?action=list',lines:true,editable:false,panelHeight:'200',panelWidth:'250px'" />
+                    <img style="cursor: pointer; vertical-align: middle;" onclick="$('#ui_teacher_dept_search').combotree('clear');"
+                        alt="清空部门" title="清空部门" src="easyui/themes/icons/edit-clear.png" />
+                    </td>
+                </tr>                                 
+                <tr>
+                    <th>注册时间：
+                    </th>
+                    <td>
+                        <input name="ui_teacher_regtime_start" id="ui_teacher_regtime_start" class="easyui-datebox"
+                            editable="false" style="width: 140px;" />
+                    </td>
+                </tr>
+                <tr>
+                    <th>至：
+                    </th>
+                    <td>
+                        <input name="ui_teacher_regtime_end" id="ui_teacher_regtime_end" class="easyui-datebox"
+                            editable="false" style="width: 140px;" />
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <a href="javascript:void(0);" class="easyui-linkbutton" iconcls="icon-search" plain="true"
+                            onclick="ui_teacher_searchdata();">搜索</a>
+                    </td>
+                    <td>
+                        <a href="javascript:void(0);" class="easyui-linkbutton" iconcls="icon-clear" plain="true"
+                            onclick="ui_teacher_cleardata();">清空条件</a>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <div data-options="region:'center',border:false">
+        <table id="ui_teacher_dg" data-options="fit:true,border:false">
+        </table>
+    </div>
+</div>

@@ -1,0 +1,174 @@
+﻿<script type="text/javascript">   
+    var oldSelectPlanId;
+    $(function () {
+    	oldSelectPlanId = -1;
+    	ui_plan_init_list();
+    });
+    function ui_plan_init_list(toolbar) {
+        $("#ui_plan_dg").datagrid({       //初始化datagrid
+            url: "planServlet.do?action=search",
+            striped: true, rownumbers: true, singleSelect: true,
+            idField: 'id',
+            sortName: 'beginTime',
+            sortOrder: 'desc',
+            pagination: true,
+            pageSize: 20,
+            pageList: [20, 40, 60, 80, 100],  
+            frozenColumns: [[
+                             { field: 'ck', checkbox: true }                             
+                         ]],
+            columns: [[
+					{ width: 200, title: '计划名称',  field: 'name', sortable: true },
+					{ width: 200, title: '组卷策略',  field: 'strategyName' },
+					{ width: 150, title: '开考时间',  field: 'beginTime', sortable: true },
+					{ width: 60,  title: '考试时长',  field: 'duration' },
+                    { width: 60,  title: '模式', field: 'examPattern', 
+                        formatter: function (value, row, index) {
+                            return value=="1" ? "同批不同题":"同批同题";
+                        }
+                    },
+                    {  width: 60, title: '分配考场', field: 'isArrangeRoom', 
+                        formatter: function (value, row, index) {
+                            return value=="1" ? "分配":"不分配";
+                        }
+                    },
+                    { width: 60,  title: '公开结果',  field: 'isShowResult',
+                        formatter: function (value, row, index) {
+                            return value=="1" ? "公开":"不公开";
+                        }
+                    },
+                   
+					{ width: 80, title: '计划人',  field: 'teacherName', sortable: true },
+					{ width: 150, title: '创建时间',  field: 'createTime', sortable: true },					
+					{ width: 200, title: '说明',  field: 'descrption', }
+                    ]],           
+            toolbar: [{
+                text: '添加',
+                iconCls: 'icon-add',
+                handler: function () { ui_plan_add(); }
+            }, {
+                text: '修改',
+                iconCls: 'icon-edit',
+                handler: function () { ui_plan_edit(); }
+            }, {
+                text: '删除',
+                iconCls: 'icon-remove',
+                handler: function () { ui_plan_delete(); }
+            }]
+        });
+
+    }
+    //添加角色
+    function ui_plan_add() {
+    	ui_dg_add_edit('添加考试计划','ui_plan','planServlet.do','planEdit.html','add',480,420);             
+    }
+    //修改角色
+    function ui_plan_edit() {
+        var rows = $("#ui_plan_dg").datagrid("getChecked");
+        if (rows.length < 1) {
+            $.show_warning("提示", "请先选择要修改的考试计划");
+            return;
+        }
+        if (rows.length > 1) {
+            $.show_warning("提示", "不支持批量修改谋划");
+            $("#ui_plan_dg").datagrid('clearSelections').datagrid('clearChecked');
+            return;
+        }
+        var row = rows[0];
+        ui_dg_add_edit('修改考试计划','ui_plan','planServlet.do','planEdit.html','edit',480,420,
+        		null,
+        		function(){//fnLoad
+        			$('#ui_plan_editform').form('load',row);
+        	});             
+    }
+	
+    //删除考试计划
+    function ui_plan_delete() {
+    	ui_dg_delete('考试谋划','ui_plan','planServlet.do');       
+    }    
+    
+    function ui_plan_searchdata() {
+        var whereStr = "1=1";       
+        var name =  $('#ui_plan_name').val();             
+        var stime = $('#ui_plan_examtime_start').datebox('getValue');
+        var etime = $('#ui_plan_examtime_end').datebox('getValue'); 
+        var para = {};
+
+        if (name != "") {
+        	para.name = name;
+        }        
+        if (stime != "") {
+        	para.starttime = stime;
+        }
+        if (etime != "") {
+        	para.endtime = stime;
+        }
+        alert(para);
+        var c = $.toJSON(para);
+        alert(c);
+        $("#ui_plan_dg").datagrid('load', c);
+        $("#ui_plan_dg").datagrid('clearSelections').datagrid('clearChecked');
+        $('#ui_plan_layout').layout('collapse', 'west');    //隐藏
+    }
+    function ui_plan_cleardata() {
+        $('#ui_plan_search input').val('');
+        $('#ui_plan_search select').val('select');
+        $('#ui_plan_regtime_start').datebox('setValue', '');
+        $('#ui_plan_regtime_end').datebox('setValue', '');
+        $("#ui_plan_dg").datagrid('load', {});
+
+        $("#ui_plan_dg").datagrid('clearSelections').datagrid('clearChecked');
+        $('#ui_plan_layout').layout('collapse', 'west');    //隐藏
+    }
+        
+</script>
+<div id="ui_plan_layout" class="easyui-layout" data-options="fit:true,border:false">
+    <div data-options="region:'center',border:false">
+        <table id="ui_plan_dg" data-options="fit:true,border:false">
+        </table>
+    </div>
+    
+    <div data-options="region:'west',split:true,border:true,collapsed:true" title="多条件查询"
+        style="width: 280px;">
+        <div id="ui_plan_search">
+        <form id="fm_plan_search">
+            <table class="tableForm" style="width: 100%; height: 100%; background: #F5F5F5;">                
+                <tr>
+                    <th>计划名称：
+                    </th>
+                    <td>
+                        <input name="name" id="ui_plan_name" class="easyui-textbox"  autocomplete="off" style="width: 130px;" />
+                    </td>
+                </tr>  
+                                              
+                <tr>
+                    <th>开考时间：
+                    </th>
+                    <td>
+                        <input name="starttime" id="ui_plan_examtime_start" class="easyui-datebox"
+                            editable="false" style="width: 140px;" />
+                    </td>
+                </tr>
+                <tr>
+                    <th>至：
+                    </th>
+                    <td>
+                        <input name="endtime" id="ui_plan_examtime_end" class="easyui-datebox"
+                            editable="false" style="width: 140px;" />
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <a href="javascript:void(0);" class="easyui-linkbutton" iconcls="icon-search" plain="true"
+                            onclick="ui_plan_searchdata();">搜索</a>
+                    </td>
+                    <td>
+                        <a href="javascript:void(0);" class="easyui-linkbutton" iconcls="icon-clear" plain="true"
+                            onclick="ui_plan_cleardata();">清空条件</a>
+                    </td>
+                </tr>
+            </table>
+            </form>
+        </div>
+    </div>
+</div>

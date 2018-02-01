@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>在线考试系统-登录</title>
+<!--bootstrap内置样式-->
+<link href="js/bootstrap-3.3.5/css/bootstrap-my.css"
+	rel="stylesheet" type="text/css" />
+<!--页面样式-->
+<link href="css/login_style.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript" src="admin/easyui/jquery.min.js"></script>
+<style>
+* {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+#FontScroll {
+	height: 30px;
+	line-height: 30px;
+	overflow: Hidden;
+}
+
+#FontScroll .line {
+	text-align: center;
+	width: 100%;
+}
+
+#FontScroll .fontColor a {
+	color: red;
+}
+</style>
+<script>
+	function openNewWin(){
+    window.open("exam.html","PopMsg","Width="
+ 		   + screen.width+',Height='+ (screen.height+40)
+ 		   +",fullscreen=yes,location=no,status=no,menubar=no,"
+ 		   +" scrollbars=no,toolbar=no,resizable=no");
+    }
+
+	$(function(){
+		
+		$('#btnLogin').click(function(){
+			var name = $('#txtname').val();
+			var pass = $('#txtpassword').val();
+			var type = $('[name=Fruit]').val();
+			$('#hitmsg').hide();
+			$('#hitmsg').text("");
+											
+			$('#btnLogin').attr('disabled',"disabled");    		//点击就禁用按钮，防止连击		
+			var para = {};
+			para.action='login';
+			para.name=name;
+			para.password=pass;
+			para.type= type;
+			$.ajax({
+                url: 'examServlet.do',
+                data: para,
+                type: "POST",
+                dataType: "json",
+                success: function (data) {                	
+                    if (data.success) {
+                    	$('#btnLogin').removeAttr('disabled');   	//恢复按钮	                       
+						window.location.href="exam.html";
+                    } else {
+                    	$('#hitmsg').text(data.msg);
+                    	$('#hitmsg').show();            			
+                        $('#btnLogin').removeAttr('disabled');   	//恢复按钮	
+                    }
+                }
+            });	
+		});
+	});
+</script>
+</head>
+
+<body>
+
+	<div class="top">
+		<div>
+			<img src="images/logo_school.png" /> <img src="images/logo.png" />
+
+		</div>
+		<div class="bg_div">
+			<img src="images/loginBg.png" class="bgimage" />
+		</div>
+		<div class="login" id="login">
+
+			<br />
+			<div class="login_from">
+				<form id="fmLogin" action="exam.html" method="post">
+					<br />
+
+					<p align="center">
+						<img src="images/user_ioc.png" width="15" height="15" /> 用户名:<input id="txtname"
+							type="text" value="请输入..."
+							onFocus="if(value==defaultValue){value='';this.style.color='#000'}"
+							onBlur="if(!value){value=defaultValue;this.style.color='#999'}"
+							style="color: #999999" />
+					</p>
+					<br />
+					<p align="center">
+						<img src="images/pass_ioc.png" width="15" height="15" />
+						密&nbsp;&nbsp;&nbsp;&nbsp;码:<input type="password" id="txtpassword" /><br />
+					</p>
+					<br />
+					<p align="center" style="margin-top: -15px;">
+						<label class="label"><input checked="true" name="Fruit"
+							type="radio" value="1" class="add_cart_radio radio radio-inline" />&nbsp;准考证号
+						</label> &nbsp;&nbsp; <label class="label"><input name="Fruit"
+							type="radio" value="2" class="add_cart_radio radio radio-inline" />&nbsp;身份证号
+						</label>
+					</p>
+					<br /> <input type="button" id="btnLogin" value="登录" class="btn btn1 btn-default" /><br/>
+					<div id="hitmsg" style="color:red;display:none;padding-left:20px" ></div>
+				</form>
+			</div>
+		</div>
+		<div align="center" class="bottom_i">©2016-2026 长沙民政职业技术学院 版权所有
+			联系电话：0731-82763288</div>
+	</div>
+</body>
+</html>

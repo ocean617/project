@@ -1,0 +1,36 @@
+﻿<script type="text/javascript">
+    //回车不提交表单，防止报405错误
+    $("#ui_room_editform").find('input').on('keydown', function (e) {
+        var e = e || event;
+        var keyNum = e.which || e.keyCode;
+        return keyNum == 13 ? false : true;
+    })
+</script>
+<div style="padding: 1px; overflow: hidden">
+	<form id="ui_room_editform" method="post">
+		<table class="tableForm" style="width: 100%">
+			<tr>
+				<th>考场编号：</th>
+				<td><input type="hidden" name="id" id="ui_room_id_edit" /> <input
+					type="text" name="no" id="ui_room_no_edit" class="easyui-numberbox"
+					data-options="required:true,prompt:'请输入数字'" autocomplete="off" /></td>
+			</tr>
+			<tr>
+				<th>考场名称：</th>
+				<td><input type="text" name="roomAddr" id="ui_room_addr_edit"
+					class="easyui-textbox" data-options="required:true"
+					autocomplete="off" /></td>
+			</tr>
+			<tr>
+				<th>容纳学生数：</th>
+				<td><input type="text" name="capacity" id="ui_room_capacity_edit"
+					class="easyui-numberbox" autocomplete="off" /></td>
+			</tr>
+			<tr>
+				<th>考场IP：</th>
+				<td><input type="text" name="roomIp" id="ui_room_ip_edit"
+					class="easyui-textbox" autocomplete="off" /></td>
+			</tr>
+		</table>
+	</form>
+</div>

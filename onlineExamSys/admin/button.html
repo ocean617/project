@@ -1,0 +1,71 @@
+﻿<script type="text/javascript">
+    $(function () {        
+    	ui_button_init_list();
+    });
+	
+    function ui_button_init_list(){
+    	
+        $("#ui_button_dg").datagrid({       //初始化datagrid
+            url: "buttonServlet.do?action=search",
+            striped: true, rownumbers: true, pagination: true, pageSize: 20,
+            idField: 'id',
+            sortName: 'seqNo',
+            sortOrder: 'asc',
+            pageList: [20, 40, 60, 80, 100],
+            frozenColumns: [[
+                { field: 'ck', checkbox: true }                
+            ]],
+            columns: [[
+            	{ field: 'text', title: '名称', sortable: true,width: 120 },
+				{ field: 'code', title: '编码', sortable: true,width: 80 },
+                { field: 'iconCls', title: '图标 ', sortable: true, width: 120 },
+                { field: 'seqNo', title: '序号', sortable: true, width: 60}
+            ]],            
+            toolbar: [{
+                text: '添加',
+                iconCls: 'icon-add',
+                handler: function () { ui_button_add(); }
+            }, {
+                text: '修改',
+                iconCls: 'icon-edit',
+                handler: function () { ui_button_edit(); }
+            }, {
+                text: '删除',
+                iconCls: 'icon-remove',
+                handler: function () { ui_button_delete(); }
+            }]
+        });       
+    }
+    //添加
+    function ui_button_add() {
+    	ui_dg_add_edit('添加按钮','ui_button','buttonServlet.do','buttonEdit.html','add',320,260);  
+    }
+    //修改课程
+    function ui_button_edit() {
+    	var rows = $("#ui_button_dg").datagrid("getChecked");
+        if (rows.length != 1) {
+            $.show_warning("提示", "请先选择一门课程进行修改！");
+            $("#ui_button_dg").datagrid('clearSelections').datagrid('clearChecked');
+            return;
+        }
+        var row = rows[0];
+        
+        ui_dg_add_edit('修改考场','ui_button','buttonServlet.do','buttonEdit.html','edit',320,260,null,function(){
+        		row.icon = row.iconCls;
+        		row.name = row.text;
+            	$("#ui_button_editform").form("load",row);
+            });  
+    }
+    
+  	//删除区域
+    function ui_button_delete() {
+    	ui_dg_delete('按钮','ui_button','buttonServlet.do');        
+    }    
+</script>
+<div id="ui_button_layout" class="easyui-layout" data-options="fit:true,border:false">
+	
+    <div data-options="region:'center',border:false">
+        <table id="ui_button_dg" data-options="fit:true,border:false">
+        </table>
+    </div>
+</div>

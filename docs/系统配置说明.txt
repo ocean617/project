@@ -1,0 +1,13 @@
+1、解压：解压后有五个文件或目录
+2、将onlineExamSys拷贝到TOMCAT安装目录/webapps目录下
+3、将sqljdbc4.jar文件拷贝到TOMCAT安装目录/lib目录下
+4、将context.xml文件拷贝到TOMCAT安装目录/conf目录下,覆盖原来的context.xml，并用记事本打开，
+   把其中的 username="sa" password="123456" 修改为您自己数据库的用户名和密码
+-----web服务完成-----
+
+5、把onlineExam.mdf和onlineExam_log.ldf拷贝到SQL SERVER安装目录/Microsoft SQL Server\MSSQL11.MSSQLSERVER\MSSQL\DATA下。
+   然后在数据库管理工具中执行“附加”操作。 
+
+注意：（1）记得在数据库配置程序中，启用TCP/IP协议。
+（2）数据库服务器的“服务器身份验证”选中“SQL SERVER和WINDOWS身份验证模式”。
+ 如果您对数据库配置可以用QQ请求远程协助。

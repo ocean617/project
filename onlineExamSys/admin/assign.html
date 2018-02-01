@@ -1,0 +1,647 @@
+﻿<script type="text/javascript">
+    var ui_assign_oldSelectPlanId;
+    $(function () {
+    	ui_assign_oldSelectPlanId=-1;
+    	ui_assign_init_list();
+    });
+    function ui_assign_init_list(toolbar) {
+        $("#ui_assign_dg").datagrid({       //初始化datagrid
+            url: "planServlet.do?action=search",
+            striped: true, rownumbers: true, singleSelect: true,
+            idField: 'id',
+            sortName: 'beginTime',
+            sortOrder: 'desc',
+            pagination: true,
+            pageSize: 20,
+            pageList: [20, 40, 60, 80, 100],  
+            frozenColumns: [[
+                             { field: 'ck', checkbox: true }                             
+                         ]],
+            columns: [[
+					{ width: 200, title: '计划名称',  field: 'name', sortable: true },					
+					{ width: 150, title: '开考时间',  field: 'beginTime', sortable: true },
+					{ width: 60,  title: '考试时长',  field: 'duration' },
+                    { width: 80,  title: '模式', field: 'examPattern', 
+                        formatter: function (value, row, index) {
+                        	return value=="1" ? "同批不同题":"同批同题";
+                        }
+                    },
+                    {  width: 60, title: '分配考场', field: 'isArrangeRoom', 
+                        formatter: function (value, row, index) {
+                            return value=="1" ? "分配":"不分配";
+                        }
+                    },
+                    { width: 60,  title: '公开结果',  field: 'isShowResult',
+                        formatter: function (value, row, index) {
+                            return value=="1" ? "公开":"不公开";
+                        }
+                    },                   
+					{ width: 80, title: '计划人',  field: 'teacherName', sortable: true }				
+                    ]],           
+            toolbar: [{
+                text: '分配考生',
+                iconCls: 'icon-assign',
+                handler: function () { ui_assign_setStudents(); }
+            }, {
+                text: '导入考生',
+                iconCls: 'icon-import',
+                handler: function () { ui_assign_importStudents(); }
+            }, {
+                text: '分配考场',
+                iconCls: 'icon-assign',
+                handler: function () { ui_assign_setRooms(); }
+            }, {
+                text: '预发试卷',
+                iconCls: 'icon-assign',
+                handler: function () { ui_assign_genPapers(); }
+            }],
+        onSelect: function (rowIndex, rowData) {
+            if (ui_assign_oldSelectPlanId == rowData.id) {  //点选的是相同的角色就不再请求数据
+                return;
+            }
+            ui_assign_oldSelectPlanId = rowData.id;   
+
+            var $ui_assign_layout = $("#ui_assign_layout");
+            var eastRoleUser = $ui_assign_layout.layout("panel", "east");
+
+            if (eastRoleUser.panel("options").collapsed) {   //判断是否展开
+                $ui_assign_layout.layout("expand", "east");
+            }
+            eastRoleUser.panel("setTitle", "【"+rowData.name + "】考生列表");
+            if ($("#ui_assign_user_dg").data("datagrid")) {
+                $("#ui_assign_user_dg").datagrid({       //请求数据
+                    url: "assignServlet.do?action=search&planId=" + ui_assign_oldSelectPlanId
+                }).datagrid('clearSelections').datagrid('clearChecked');
+            }
+            else {
+                $("#ui_assign_user_dg").datagrid({       //初始化datagrid
+                	url: "assignServlet.do?action=search&planId=" + ui_assign_oldSelectPlanId,
+                    striped: true,
+                    rownumbers: true,
+                    pagination: true,
+                    pageSize: 20,
+                    singleSelect: false,
+                    idField: 'id',
+                    sortName: 'studentId',
+                    sortOrder: 'asc',
+                    pageList: [20, 40, 60, 80, 100],     
+                    frozenColumns: [[
+                                     { field: 'ck', checkbox: true }                             
+                                 ]],
+                    columns: [[						
+					  
+                       { field: 'no',  title: '学号',width: 80, sortable: true },
+					   { field: 'studentName',  title: '姓名',width: 80, sortable: true },
+					   { field: 'examRoomName',  title: '考场',width: 80, sortable: true },
+                       { field: 'seatNo', title: '座位', width: 60, sortable: true},
+                       { field: 'examstatus', title: '状态', width: 150, sortable: true, 
+                           formatter: function (value, row, index) {
+                        	   if(value==1) return "已生成试卷";
+                        	   else if(value==2) return "答题中";
+                        	   else if(value==3) return "已提交试卷";
+                        	   else if(value==0) return "未生成试卷";
+                           }
+                       }
+                    ]],
+                    toolbar:[{
+                    	text: '移除考生',
+                        iconCls: 'icon-remove',
+                        handler: function () { ui_assign_removeStudent(); }
+                    },"-",{
+                    	text: '重发试卷',
+                        iconCls: 'icon-assign',
+                        handler: function () { ui_assign_genAPaper(); }
+                    },{
+                    	text: '查看试卷',
+                        iconCls: 'icon-view',
+                        handler: function () { ui_assign_viewPaper(); }
+                    }]
+                });
+            }
+        }
+    
+        });
+    }
+    
+    
+    
+    //预发试卷
+	function ui_assign_genPapers(){
+		var rows = $("#ui_assign_dg").datagrid("getChecked");
+        if (rows.length < 1) {
+            $.show_warning("提示", "请先选择要生成试卷的考试计划");
+            return;
+        }
+        var planIds = [];
+        $.each(rows, function (i, row){
+        	planIds.push(row.id);
+        });
+        var para = {};
+        para.action = 'genPapers';
+        para.planIds = planIds.join(',');
+        $('#ui_assign_dlg_waiting').dialog({         	
+      		modal: true,
+      		title:'提示',
+      		width:200,
+      		height:60
+      		}).dialog("open");
+        $.ajax({
+        	url:'assignServlet.do',
+        	type:'POST',
+        	dataType:'json',
+        	data: para,
+        	timeout: 600000, 
+        	error: function (XMLHttpRequest, status, errorThrown){
+        		$('#ui_assign_dlg_waiting').dialog("close"); 
+        		if(status=='timeout'){
+        			$("#ui_assign_dg").datagrid("reload").datagrid('clearSelections').datagrid('clearChecked');
+        			$("#ui_assign_user_dg").datagrid("reload").datagrid('clearSelections').datagrid('clearChecked');        		
+				}
+			},
+        	success:function(data){     
+        		$('#ui_assign_dlg_waiting').dialog("close");   		
+        		if(data.success){
+        			$("#ui_assign_dg").datagrid("reload").datagrid('clearSelections').datagrid('clearChecked');
+        			$("#ui_assign_user_dg").datagrid("reload").datagrid('clearSelections').datagrid('clearChecked');
+        			$.show_warning("提示",data.msg);
+        		}else{
+        			$.show_alert("提示",data.msg);
+        		}        		
+        	}
+        });
+    }
+	//导入考生
+    function ui_assign_importStudents() {		
+		var modname="ui_assign";
+		var rows = $("#ui_assign_dg").datagrid("getChecked");
+        if (rows.length < 1) {
+            $.show_warning("提示", "请先勾选要上传考生的考试计划");
+            return;
+        }
+        if (rows.length > 1) {
+            $.show_warning("提示", "不支持同时给多个计划上传考生");
+            $("#ui_assign_dg").datagrid('clearSelections').datagrid('clearChecked');
+            return;
+        }
+        var row = rows[0];
+		$('<div/>').dialog({
+			id : modname + "_upload_dialog",
+			href : 'assignStudentUpload.html',
+			title : '上传考生并导入',
+			iconCls : 'icon-import',
+			height : 200,
+			width : 380,
+			modal : true,
+			buttons : [ {
+				id : modname + "_upload_btn",
+				iconCls : 'icon-import',
+				text : '上传并导入',
+				handler : function() {	
+					$('#ui_upload_assign_dlg_waiting').dialog({         	
+			      		modal: true,
+			      		title:'提示',
+			      		width:200,
+			      		height:80
+			      		}).dialog("open");
+					$("#ui_upload_assign_fm").form("submit", {
+	                    url: "assignServlet.do?action=import&planId="+row.id,
+	                    onSubmit: function (param) {	                        
+	                        var v = $("#ui_upload_assign_fm_file").val(); 	 							                  
+	                        if (!v || v.length==0) {
+	                            $.show_alert('提示', '请选择要导入的考生文件!');
+	                            $("#ui_upload_assign_fm_file").focus();	                            
+	                            $('#ui_upload_assign_dlg_waiting').dialog("close");
+	                            return false;
+	                        }	                        
+	                        $('#'+modname+'_upload_btn').linkbutton('disable');    //点击就禁用按钮，防止连击		                        
+	                        return true;
+	                    },
+	                    success: function (data) {     
+	                    	$('#ui_upload_assign_dlg_waiting').dialog("close");
+	                        var dataJson = eval('(' + data + ')');    //转成json格式
+	                        if (dataJson.success) {	                            
+	                            $.show_warning("提示", dataJson.msg);
+	                            $("#ui_assign_user_dg").datagrid("reload").datagrid('clearSelections').datagrid('clearChecked');                    
+	                            $("#" + modname + "_upload_dialog").dialog('destroy');  
+	                        } else {
+	                            $('#'+modname+'_upload_btn').linkbutton('enable');   //恢复按钮
+	                            $.show_warning("提示", dataJson.msg);
+	                        }
+	                    },
+	                    error: function (XMLHttpRequest, status, errorThrown){
+			        		$('#ui_upload_assign_dlg_waiting').dialog("close"); 			        		
+						}
+	                });
+				}
+			} ],
+			onLoad : function() {				
+					
+			},
+			onClose : function() {				
+				$("#" + modname + "_upload_dialog").dialog('destroy'); //销毁dialog对象
+			}
+		});
+	}
+
+	//分配考生
+    function ui_assign_setStudents() {
+        var rows = $("#ui_assign_dg").datagrid("getChecked");
+        if (rows.length < 1) {
+            $.show_warning("提示", "请先勾选要分配考生的考试计划");
+            return;
+        }
+        if (rows.length > 1) {
+            $.show_warning("提示", "不支持同时给多个计划分配考生");
+            $("#ui_assign_dg").datagrid('clearSelections').datagrid('clearChecked');
+            return;
+        }
+        var row = rows[0];
+        //初始化dialog
+        $("<div/>").dialog({
+            id: "ui_assign_setStudents_dialog",
+            href: "planStudents.html",
+            title: "分配考生：" + row.name,
+            iconCls:"icon-assign",
+            height: 400,
+            width: 700,
+            modal: true,
+            buttons: [{
+                id: "ui_assign_setStudents_btn",
+                text: '分配',
+                iconCls: "icon-ok",
+                handler: function () {
+                    $('#ui_assign_setStudents_btn').linkbutton('disable');
+                    setStudents(row.id);  //保存分配信息                    
+                }
+            }],
+            onLoad: function () {
+            	ui_plan_planstudent_init_list(row.id);
+            },
+            onClose: function () {
+                $("#ui_assign_setStudents_dialog").dialog('destroy');  //销毁dialog对象
+            }
+        });
+    }
+  	
+    function setStudents(planId) {   //保存分配信息
+        var rows = $('#ui_plan_planstudent_dg').datagrid('getChecked');
+        var studentIds = [];
+        for (var i = 0; i < rows.length; i++) {
+        	studentIds.push(rows[i].id);    	//学生ID            
+        }
+        var para = {};
+        para.action = "setStudents";
+        para.timespan = new Date().getTime();
+        para.studentIds = studentIds.join(',');
+        para.planId = planId;
+
+        $.ajax({
+            url: 'assignServlet.do',
+            data: para,
+            type: "POST",
+            dataType: "json",
+            success: function (data) {
+                if (data.success) {
+                	$.show_warning("提示", data.msg);
+                	$("#ui_assign_user_dg").datagrid("reload").datagrid('clearSelections').datagrid('clearChecked');                    
+                    $("#ui_assign_setStudents_dialog").dialog('close');  //销毁dialog对象
+                    
+                } else {
+                    $('#ui_assign_setStudents_btn').linkbutton('enable');
+                    $.show_warning("提示", data.msg);
+                }
+            }
+        });
+    }
+         
+    //从考试计划中移除考生
+    function ui_assign_removeStudent() {
+    	var rows = $("#ui_assign_user_dg").datagrid("getChecked");
+        if (rows.length < 1) {
+            $.show_warning("提示", "请先勾选要移除的考生!");
+            return;
+        }
+        $.messager.confirm('提示', '确定移除勾选的这' + rows.length + '个考生？', function (r) {
+            if (r) {
+            	
+            	var ids = [];
+                $.each(rows, function (i, row) {
+                    ids.push(row.studentId);
+                });
+            	
+                para = {};
+                para.planId = ui_assign_oldSelectPlanId;
+                para.action = "removeStudent";
+                para.timespan = new Date().getTime();                
+                
+                para.studentIds = ids.join(",");
+                $.ajax({
+                	url: 'assignServlet.do',
+                    data: para,
+                    type: "POST",
+                    dataType: "json",
+                    success: function (data) {
+                        if (data.success) {
+                            $.show_warning("提示", data.msg);
+                        	$("#ui_assign_user_dg").datagrid("reload").datagrid('clearSelections').datagrid('clearChecked');
+                            
+                        } else {
+                            $.show_warning("提示", data.msg);
+                        }
+                    }
+                });
+            }
+        });    	
+    }  
+    function ui_assign_setRooms(){
+    	 var rows = $("#ui_assign_dg").datagrid("getChecked");
+         if (rows.length < 1) {
+             $.show_warning("提示", "请先勾选要分配考场的考试计划");
+             return;
+         }
+         if (rows.length > 1) {
+             $.show_warning("提示", "不支持同时给多个计划分配考场");
+             $("#ui_assign_dg").datagrid('clearSelections').datagrid('clearChecked');
+             return;
+         }
+         var row = rows[0];
+         //初始化dialog
+         $("<div/>").dialog({
+             id: "ui_assign_common_dialog",
+             href: 'assignSetRoom.html',
+             title: '选择考场',
+             iconCls: 'icon-room',
+             height: 320,
+             width: 500,
+             modal: true,
+             buttons: [{
+                 id: "ui_assign_common_btn",
+                 iconCls:  'icon-ok',
+                 text:'确定',
+                 handler: function () {
+                 	                	
+                     var rooms = $("#ui_assign_setroom_dg").datagrid("getChecked");
+                     if(rooms.length < 1){
+                     	$.show_alert("提示","请至少选择一个考场进行分配！")
+                     	return;
+                     }
+                     
+                     para = {};
+                     para.action = "setRooms";
+                     para.timespan = new Date().getTime();
+                     para.planId = row.id;
+                     //考场ID
+                     var roomIds = [];
+                     for(var i=0;i<rooms.length;i++){
+                    	 roomIds.push(rooms[i].id);
+                     }
+                     para.roomIds = roomIds.join(",");
+                     
+                 	$.ajax({
+                         url: 'assignServlet.do',
+                         data: para,
+                         type: "POST",
+                         dataType: "json",
+                         success: function (data) {
+                             if (data.success) {
+                                 $.show_warning("提示", data.msg);                                
+                                 $("#ui_assign_user_dg").datagrid("reload").datagrid('clearSelections').datagrid('clearChecked');
+                                 $("#ui_assign_common_dialog").dialog('destroy');
+                             } else {
+                                 $.show_warning("提示", data.msg);
+                             }
+                         }
+                     });
+                 }
+             }],
+             onLoad: function () {        	
+            	 ui_assign_setroom_init_list(row.id);
+            	 $.ajax({
+            		 url:'assignServlet.do?action=getCountOfStudents',
+            		 type:"POST",
+            		 dataType:'json',
+            		 data:{planId:row.id},
+            		 success:function(data){
+            			 if(data.success){
+            				 $('#ui_assign_setroom_totals').text(data.msg);
+            			 }else{
+            				 $('#ui_assign_setroom_totals').text(data.msg);
+            			 }            			 
+            		 }
+            	 });
+             },
+             onClose: function () {
+                 $("#ui_assign_common_dialog").dialog('destroy');  //销毁dialog对象
+             }
+         });    
+     }    
+   	
+  	//为考生分配考场
+    function ui_assign_setRoom() {
+    	var rows = $("#ui_assign_user_dg").datagrid("getChecked");
+        if (rows.length < 1) {
+            $.show_warning("提示", "请先勾选要分配考场的考生");
+            return;
+        }
+        
+    	$("<div/>").dialog({
+            id: "ui_assign_common_dialog",
+            href: 'assignSetRoom.html',
+            title: '选择考场',
+            iconCls: 'icon-room',
+            height: 320,
+            width: 450,
+            modal: true,
+            buttons: [{
+                id: "ui_assign_common_btn",
+                iconCls:  'icon-ok',
+                text:'确定',
+                handler: function () {
+                	                	
+                    var rooms = $("#ui_assign_setroom_dg").datagrid("getChecked");
+					if(rooms.length>1){
+						$.show_alert("提示","只能选择一个考场进行分配！");
+						return;
+					}                   	                    
+                    para = {};
+                    para.action = "setRoom";
+                    para.timespan = new Date().getTime();
+                    //考场ID
+                    if(rooms.length>0){
+                    	para.roomId = rooms[0].id;
+                    }
+                    //学生                    
+                    var ids = [];
+                    $.each(rows, function (i, row) {
+                        ids.push(row.id);
+                    });
+                    para.Ids = ids.join(",");
+                    
+                	$.ajax({
+                        url: 'assignServlet.do',
+                        data: para,
+                        type: "POST",
+                        dataType: "json",
+                        success: function (data) {
+                            if (data.success) {
+                                $.show_warning("提示", data.msg);                                
+                                $("#ui_assign_user_dg").datagrid("reload").datagrid('clearSelections').datagrid('clearChecked');
+                                $("#ui_assign_common_dialog").dialog('destroy');
+                            } else {
+                                $.show_warning("提示", data.msg);
+                            }
+                        }
+                    });
+                }
+            }],
+            onLoad: function () { 
+            	ui_assign_setroom_init_list("");
+            	$('#ui_assign_setroom_totals').text(""+rows.length);
+            },
+            onClose: function () {
+                $("#ui_assign_common_dialog").dialog('destroy');  //销毁dialog对象
+            }
+        });    
+    }    
+  	
+  	
+    
+  	/*
+  	分配座位
+  	mode: 0 ：随机， 1： 顺序
+  	*/
+    function ui_assign_setSeats(planId,mode) {   //保存分配信息
+        
+        var para = {};
+        para.action = "setSeats";
+        para.timespan = new Date().getTime();        
+        para.planId = planId;
+        para.mode = mode;
+        $.ajax({
+            url: 'assignServlet.do',
+            data: para,
+            type: "POST",
+            dataType: "json",
+            success: function (data) {
+                if (data.success) {
+                	$("#ui_assign_user_dg").datagrid("reload").datagrid('clearSelections').datagrid('clearChecked');                    
+                    $.show_warning("提示", data.msg);
+                } else {                    
+                    $.show_warning("提示", data.msg);
+                }
+            }
+        });
+    }
+    
+    /*
+    	为某个计划的考生生成试卷
+    	planId:计划ID
+    	studentIds:考生ID列表
+    */
+    function ui_assign_genAPaper(){
+    	var rows = $("#ui_assign_user_dg").datagrid("getChecked");
+        if (rows.length < 1) {
+            $.show_warning("提示", "请先勾选要生成试卷的考试考生");
+            return;
+        }
+        var studentIds = [];
+        for (var i = 0; i < rows.length; i++) {
+        	studentIds.push(rows[i].studentId);    	//学生ID            
+        }
+        
+        var para = {};
+        para.action = "genAPaper";
+        para.timespan = new Date().getTime();        
+        para.planId = ui_assign_oldSelectPlanId;
+        para.studentIds = studentIds.join(',');
+        $.ajax({
+            url: 'assignServlet.do',
+            data: para,
+            type: "POST",
+            dataType: "json",
+            success: function (data) {
+                if (data.success) {                	
+                    $.show_warning("提示", data.msg);
+                    $("#ui_assign_user_dg").datagrid("reload").datagrid('clearSelections').datagrid('clearChecked');                                        
+                } else {
+                    $.show_warning("提示", data.msg);
+                }
+            }
+        });
+    }
+    
+    /*预览试卷*/
+    function ui_assign_viewPaper(){
+    	var rows = $("#ui_assign_user_dg").datagrid("getChecked");
+        if (rows.length < 1) {
+            $.show_warning("提示", "请先勾选要查阅试卷的考生");
+            return;
+        }
+        if (rows.length != 1) {
+            $.show_warning("提示", "请选择一位考生！");
+            $("#ui_assign_user_dg").datagrid('clearSelections').datagrid('clearChecked');  
+            return;
+        }
+        
+        if(rows[0].examstatus==0){
+        	$.show_warning("提示", "该考生还没有试卷！");
+        	return;
+        }
+        var studentId = rows[0].studentId;
+        var para = {};
+        para.action = "getAPaper";
+        para.timespan = new Date().getTime();        
+        para.planId = ui_assign_oldSelectPlanId;
+        para.studentId = studentId;
+        var title = "查看考生["+ rows[0].studentName+"]试卷";
+        $.ajax({
+            url: 'assignServlet.do',
+            data: para,
+            type: "POST",
+            dataType: "json",
+            success: function (data) {
+                if (data && data.length) {                	
+                	$("<div/>").dialog({
+                        id: "ui_assign_common_dialog",
+                        href: "paperview.html",
+                        title: title,
+                        iconCls: "icon-view",
+                        height: 600,
+                        width: 800,
+                        modal: true,
+                        buttons: [{
+                            id: "ui_assign_common_dialog_btn",
+                            iconCls: "icon-cancel",
+                            text:"关闭" ,
+                            handler: function () {
+                                $('#ui_assign_common_dialog').dialog("close");
+                            }
+                        }],
+                        onLoad: function () {        	
+                        	paperview_genPaper(data);
+                        },
+                        onClose: function () {
+                            $("#ui_assign_common_dialog").dialog('destroy');  //销毁dialog对象
+                        }
+                    });
+                } else {
+                    $.show_warning("提示", data.msg);
+                }
+            }
+        });        
+    }
+        
+</script>
+<div id="ui_assign_layout" class="easyui-layout" data-options="fit:true,border:false">	
+	<div id="ui_assign_dlg_waiting" >正在预发试卷，请耐心等待...</div>
+    <div data-options="region:'east',split:true,border:true,collapsed:true" title="角色成员"
+        style="width: 40%;">
+        <table id="ui_assign_user_dg" data-options="fit:true,border:false">
+        </table>
+    </div>
+    <div data-options="region:'center',border:false">
+        <table id="ui_assign_dg" data-options="fit:true,border:false">
+        </table>
+    </div>    
+</div>
+

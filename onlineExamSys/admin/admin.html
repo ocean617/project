@@ -1,0 +1,196 @@
+<script>
+	function ui_admin_delete_allstudent(){
+		
+	    $.messager.confirm('提示', '确定要删除全部考生吗？', function (r) {
+	        if (r) {
+	            var para = {};
+	            para.action = "deleteStudentByAll";
+	            para.timespan = new Date().getTime();
+	            
+	            $.ajax({
+	                url: 'adminServlet.do',
+	                data: para,
+	                type: "POST",
+	                dataType: "json",
+	                success: function (data) {
+	                    if (data.success) {
+	                        $.show_warning("提示", data.msg);	                        
+	                    } else {
+	                        $.show_warning("提示", data.msg);
+	                    }
+	                }
+	            });
+	        }
+	    });
+	}
+	
+	function ui_admin_delete_student_bydept(){
+		var deptId = $('#ui_admin_deptid').combotree('getValue');
+		var deptName = $('#ui_admin_deptid').combotree('getText');
+		if(!deptId || deptId.length==0){
+			$.show_alert("提示","请选择要删除班级或部门!");
+			return;
+		}
+		$.messager.confirm('提示', '确定要删除【'+deptName+'】考生吗？', function (r) {
+	        if (r) {
+	            var para = {};
+	            para.action = "deleteStudentByDept";
+	            para.deptId = deptId;
+	            para.timespan = new Date().getTime();
+	            
+	            $.ajax({
+	                url: 'adminServlet.do',
+	                data: para,
+	                type: "POST",
+	                dataType: "json",
+	                success: function (data) {
+	                    if (data.success) {
+	                        $.show_warning("提示", data.msg);	                        
+	                    } else {
+	                        $.show_warning("提示", data.msg);
+	                    }
+	                }
+	            });
+	        }
+	    });
+	}
+	
+	function ui_admin_delete_allquestion(){
+		$.messager.confirm('提示', '确定要删除试题吗？', function (r) {
+	        if (r) {
+	            var para = {};
+	            para.action = "deleteAllQuestion";
+	            para.timespan = new Date().getTime();
+	            
+	            $.ajax({
+	                url: 'adminServlet.do',
+	                data: para,
+	                type: "POST",
+	                dataType: "json",
+	                success: function (data) {
+	                    if (data.success) {
+	                        $.show_warning("提示", data.msg);	                        
+	                    } else {
+	                        $.show_warning("提示", data.msg);
+	                    }
+	                }
+	            });
+	        }
+	    });
+	}
+	
+	function ui_admin_backup_database(){
+		
+		$('<div/>').dialog({			
+			id : "ui_admin_backup_dialog",
+			href : 'export.html',
+			title : '数据库备份',
+			iconCls : 'icon-export',
+			height : 150,
+			width : 320,
+			modal : true,
+			buttons : [ {				
+				iconCls : 'icon-cancel',
+				text : '关闭',
+				handler : function() {
+					$("#ui_admin_backup_dialog").dialog('destroy'); //销毁dialog对象	
+				}
+			} ],
+			onLoad : function() {	
+				$('#ui_export_hitting').text('正在备份文件，请稍候...');
+				$('#ui_export_download').hide();
+				var para = {};
+				para.action='export';				
+				$.ajax({
+					url:'adminServlet.do',
+					method:'POST',
+					dataType:'json',
+					data:para,
+					success:function(data){
+						if(data.success){
+							$('#ui_export_hitting').text('备份结束，请点击文件下载！');
+							$('#ui_export_url').attr("href","downloadServlet.do?action=download&filename="+data.msg);
+							$('#ui_export_url').text("备份文件下载");
+							$('#ui_export_download').show();
+							
+						}else{
+							$.show_warning("提示",data.msg);
+						}
+					}
+				});	
+			},
+			onClose : function() {
+				$("#ui_admin_backup_dialog").dialog('destroy'); //销毁dialog对象
+			}
+		});				
+	}
+	
+	function ui_admin_restore_database(){
+		
+		$('<div/>').dialog({
+			id : "ui_admin_common_dialog",
+			href : 'upload.html',
+			title : '数据库恢复',
+			iconCls : 'icon-import',
+			height : 240,
+			width : 400,
+			modal : true,
+			buttons : [ {
+				id : "ui_admin__common_btn",
+				iconCls : 'icon-cancel',
+				text : '关闭',
+				handler : function() {
+					$("#ui_admin_common_dialog").dialog('destroy');  
+				}
+			} ],
+			onLoad : function() {				
+				$('#ui_upload_file_template').attr('href','#');	
+				$('#ui_upload_file_template').text('请上传数据库备份文件');					
+				$('#ui_upload_importurl').val('adminServlet.do');				
+			},
+			onClose : function() {
+				$("#ui_admin_common_dialog").dialog('destroy'); //销毁dialog对象
+			}
+		});		
+	}
+</script>
+<div id="ui_admin_layout" class="easyui-layout"
+	data-options="fit:true,border:false">
+	<div data-options="region:'center',border:false" style="padding: 20px;">
+		<table class="tableForm" style="width: 50%" align="center">
+
+			<tr>
+				
+				<td>班级： <input class="easyui-combotree" id="ui_admin_deptid"
+					name="deptId"
+					data-options="url:'departmentServlet.do?action=list',lines:true,editable:false,panelHeight:'200',panelWidth:'250'" />
+
+				</td>
+				<td><a href="javascript:void(0)" class="easyui-linkbutton" plain="false"
+					data-options="iconCls:'icon-remove',"
+					onclick="ui_admin_delete_student_bydept()">删除班级考生</a></td>
+			</tr>
+			<tr>
+				<td><a href="javascript:void(0)" class="easyui-linkbutton" plain="false"
+					data-options="iconCls:'icon-delete',"
+					onclick="ui_admin_delete_allstudent()">删除全部考生</a></td>
+				
+			
+				<td><a href="javascript:void(0)" class="easyui-linkbutton" plain="false"
+					data-options="iconCls:'icon-delete3',"
+					onclick="ui_admin_delete_allquestion()">删除全部试题</a></td>
+
+			</tr>
+
+			<tr>
+				<td><a href="javascript:void(0)" class="easyui-linkbutton" plain="false"
+					data-options="iconCls:'icon-backup',"
+					onclick="ui_admin_backup_database()">备份数据库</a></td>
+
+				<td><a href="javascript:void(0)" class="easyui-linkbutton" plain="false"
+					data-options="iconCls:'icon-restore',"
+					onclick="ui_admin_restore_database()">恢复数据库</a></td>
+			</tr>
+		</table>
+	</div>
+</div>
